@@ -1,0 +1,114 @@
+2026-05-05T16:34:26.005+05:30  INFO 27776 --- [dispatch-service] [main] c.r.d.DispatchServiceApplicationTests    : Starting DispatchServiceApplicationTests using Java 21.0.10 with PID 27776 (started by MettupallySreejaRedd in C:\Users\MettupallySreejaRedd\SpringT\RapidFix-Complete\dispatch-service)
+2026-05-05T16:34:26.013+05:30 DEBUG 27776 --- [dispatch-service] [main] c.r.d.DispatchServiceApplicationTests    : Running with Spring Boot v3.2.3, Spring v6.1.4
+2026-05-05T16:34:26.014+05:30  INFO 27776 --- [dispatch-service] [main] c.r.d.DispatchServiceApplicationTests    : No active profile set, falling back to 1 default profile: "default"
+2026-05-05T16:34:26.955+05:30  INFO 27776 --- [dispatch-service] [main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-05-05T16:34:27.125+05:30  INFO 27776 --- [dispatch-service] [main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 164 ms. Found 2 JPA repository interfaces.
+2026-05-05T16:34:27.771+05:30  INFO 27776 --- [dispatch-service] [main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-05-05T16:34:27.870+05:30  INFO 27776 --- [dispatch-service] [main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.4.4.Final
+2026-05-05T16:34:27.911+05:30  INFO 27776 --- [dispatch-service] [main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-05-05T16:34:28.190+05:30  INFO 27776 --- [dispatch-service] [main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-05-05T16:34:28.218+05:30  INFO 27776 --- [dispatch-service] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-05-05T16:34:28.392+05:30  INFO 27776 --- [dispatch-service] [main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection conn0: url=jdbc:h2:mem:testdb user=ROOT
+2026-05-05T16:34:28.393+05:30  INFO 27776 --- [dispatch-service] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-05-05T16:34:28.412+05:30  WARN 27776 --- [dispatch-service] [main] org.hibernate.orm.deprecation            : HHH90000025: H2Dialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-05-05T16:34:29.336+05:30  INFO 27776 --- [dispatch-service] [main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-05-05T16:34:29.373+05:30  INFO 27776 --- [dispatch-service] [main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-05-05T16:34:29.753+05:30  INFO 27776 --- [dispatch-service] [main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-05-05T16:34:30.664+05:30  WARN 27776 --- [dispatch-service] [main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-05-05T16:34:30.704+05:30  WARN 27776 --- [dispatch-service] [main] .s.s.UserDetailsServiceAutoConfiguration : 
+
+Using generated security password: 8bc6285b-c72d-4927-89cd-614854c65788
+
+This generated password is for development use only. Your security configuration must be updated before running your application in production.
+
+2026-05-05T16:34:31.050+05:30  INFO 27776 --- [dispatch-service] [main] o.s.s.web.DefaultSecurityFilterChain     : Will secure any request with [org.springframework.security.web.session.DisableEncodeUrlFilter@7efcdcde, org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter@36f807f5, org.springframework.security.web.context.SecurityContextHolderFilter@3c0a4c8b, org.springframework.security.web.header.HeaderWriterFilter@4f8eb97c, org.springframework.web.filter.CorsFilter@352b4cf, org.springframework.security.web.authentication.logout.LogoutFilter@7b5f886d, com.rapidfix.dispatch.security.JwtAuthFilter@7343d843, org.springframework.security.web.savedrequest.RequestCacheAwareFilter@4039d109, org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter@1b7123e5, org.springframework.security.web.authentication.AnonymousAuthenticationFilter@7b2fb8f1, org.springframework.security.web.session.SessionManagementFilter@7ef3b7ac, org.springframework.security.web.access.ExceptionTranslationFilter@5920c4ed, org.springframework.security.web.access.intercept.AuthorizationFilter@178be8fc]
+2026-05-05T16:34:31.648+05:30  INFO 27776 --- [dispatch-service] [main] c.r.d.DispatchServiceApplicationTests    : Started DispatchServiceApplicationTests in 5.94 seconds (process running for 6.973)
+2026-05-05T16:34:31.654+05:30 DEBUG 27776 --- [dispatch-service] [scheduling-1] c.r.d.scheduler.AutoAssignmentScheduler  : Auto-assignment scheduler triggered
+2026-05-05T16:34:33.001+05:30  INFO 27776 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : Technician 20 submitting quote for request 1
+2026-05-05T16:34:33.012+05:30  INFO 27776 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : User approving quote for request 1
+2026-05-05T16:34:33.110+05:30  INFO 27776 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : Request 1 CANCELLED
+2026-05-05T16:34:33.119+05:30  INFO 27776 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : Request 1 CANCELLED
+2026-05-05T16:34:33.150+05:30  INFO 27776 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : Request 1 COMPLETED. Quoted: Rs400.0 | Final: Rs500.0
+2026-05-05T16:34:33.169+05:30  INFO 27776 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : Request 1 COMPLETED. Quoted: Rs400.0 | Final: Rs500.0
+2026-05-05T16:34:33.227+05:30  INFO 27776 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : Request 1 IN_PROGRESS — technician on site
+2026-05-05T16:34:33.243+05:30  INFO 27776 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : User rejecting quote for request 1
+2026-05-05T16:34:33.255+05:30  INFO 27776 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : User rejecting quote for request 1
+2026-05-05T16:34:33.256+05:30  INFO 27776 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : Quote rejected for request 1. Back to PENDING.
+2026-05-05T16:34:33.292+05:30  INFO 27776 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : User approving quote for request 1
+2026-05-05T16:34:33.306+05:30  INFO 27776 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : User approving quote for request 1
+2026-05-05T16:34:33.308+05:30  INFO 27776 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : Quote approved for request 1. Technician 20 now visiting.
+2026-05-05T16:34:33.323+05:30  INFO 27776 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : User approving quote for request 1
+2026-05-05T16:34:33.325+05:30  INFO 27776 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : Quote approved for request 1. Technician 20 now visiting.
+2026-05-05T16:34:33.345+05:30  INFO 27776 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : Technician 20 submitting quote for request 1
+2026-05-05T16:34:33.347+05:30  INFO 27776 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : Quote submitted: ₹400.0 total for request 1
+2026-05-05T16:34:33.360+05:30  INFO 27776 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : Technician 20 submitting quote for request 1
+2026-05-05T16:34:33.361+05:30  INFO 27776 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : Quote submitted: ₹400.0 total for request 1
+2026-05-05T16:34:33.370+05:30  INFO 27776 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : Technician 20 submitting quote for request 1
+2026-05-05T16:34:33.371+05:30  INFO 27776 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : Quote submitted: ₹448.0 total for request 1
+2026-05-05T16:34:33.382+05:30  INFO 27776 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : Technician 20 submitting quote for request 1
+2026-05-05T16:34:33.416+05:30  INFO 27776 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : New service request from userId=10 (sreeja@gmail.com) for ELECTRICIAN
+2026-05-05T16:34:33.416+05:30  INFO 27776 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : ServiceRequest created id=1
+2026-05-05T16:34:33.421+05:30  INFO 27776 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : Broadcasted request 1 to 0 technicians
+2026-05-05T16:34:33.429+05:30  INFO 27776 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : New service request from userId=10 (sreeja@gmail.com) for ELECTRICIAN
+2026-05-05T16:34:33.429+05:30  INFO 27776 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : ServiceRequest created id=1
+2026-05-05T16:34:33.430+05:30  INFO 27776 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : Broadcasted request 1 to 0 technicians
+2026-05-05T16:34:33.480+05:30  INFO 27776 --- [dispatch-service] [SpringApplicationShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-05-05T16:34:33.488+05:30  INFO 27776 --- [dispatch-service] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-05-05T16:34:33.490+05:30  INFO 27776 --- [dispatch-service] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+2026-05-05T16:38:39.136+05:30  INFO 20728 --- [dispatch-service] [main] c.r.d.DispatchServiceApplicationTests    : Starting DispatchServiceApplicationTests using Java 21.0.10 with PID 20728 (started by MettupallySreejaRedd in C:\Users\MettupallySreejaRedd\SpringT\RapidFix-Complete\dispatch-service)
+2026-05-05T16:38:39.144+05:30 DEBUG 20728 --- [dispatch-service] [main] c.r.d.DispatchServiceApplicationTests    : Running with Spring Boot v3.2.3, Spring v6.1.4
+2026-05-05T16:38:39.144+05:30  INFO 20728 --- [dispatch-service] [main] c.r.d.DispatchServiceApplicationTests    : No active profile set, falling back to 1 default profile: "default"
+2026-05-05T16:38:40.235+05:30  INFO 20728 --- [dispatch-service] [main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-05-05T16:38:40.391+05:30  INFO 20728 --- [dispatch-service] [main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 148 ms. Found 2 JPA repository interfaces.
+2026-05-05T16:38:41.049+05:30  INFO 20728 --- [dispatch-service] [main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-05-05T16:38:41.117+05:30  INFO 20728 --- [dispatch-service] [main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.4.4.Final
+2026-05-05T16:38:41.169+05:30  INFO 20728 --- [dispatch-service] [main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-05-05T16:38:41.472+05:30  INFO 20728 --- [dispatch-service] [main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-05-05T16:38:41.502+05:30  INFO 20728 --- [dispatch-service] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-05-05T16:38:41.667+05:30  INFO 20728 --- [dispatch-service] [main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection conn0: url=jdbc:h2:mem:testdb user=ROOT
+2026-05-05T16:38:41.668+05:30  INFO 20728 --- [dispatch-service] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-05-05T16:38:41.692+05:30  WARN 20728 --- [dispatch-service] [main] org.hibernate.orm.deprecation            : HHH90000025: H2Dialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-05-05T16:38:42.536+05:30  INFO 20728 --- [dispatch-service] [main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-05-05T16:38:42.570+05:30  INFO 20728 --- [dispatch-service] [main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-05-05T16:38:42.980+05:30  INFO 20728 --- [dispatch-service] [main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-05-05T16:38:43.807+05:30  WARN 20728 --- [dispatch-service] [main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-05-05T16:38:43.839+05:30  WARN 20728 --- [dispatch-service] [main] .s.s.UserDetailsServiceAutoConfiguration : 
+
+Using generated security password: 636eb1f5-39f4-448b-a90d-a10140c6b538
+
+This generated password is for development use only. Your security configuration must be updated before running your application in production.
+
+2026-05-05T16:38:44.190+05:30  INFO 20728 --- [dispatch-service] [main] o.s.s.web.DefaultSecurityFilterChain     : Will secure any request with [org.springframework.security.web.session.DisableEncodeUrlFilter@37403f66, org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter@da51aa8, org.springframework.security.web.context.SecurityContextHolderFilter@32a37d12, org.springframework.security.web.header.HeaderWriterFilter@1b2c513e, org.springframework.web.filter.CorsFilter@cd8e702, org.springframework.security.web.authentication.logout.LogoutFilter@78ae9b9c, com.rapidfix.dispatch.security.JwtAuthFilter@32d8e58d, org.springframework.security.web.savedrequest.RequestCacheAwareFilter@2adb532c, org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter@45682e3e, org.springframework.security.web.authentication.AnonymousAuthenticationFilter@28897ca, org.springframework.security.web.session.SessionManagementFilter@23d030b1, org.springframework.security.web.access.ExceptionTranslationFilter@61774805, org.springframework.security.web.access.intercept.AuthorizationFilter@7739bcca]
+2026-05-05T16:38:44.696+05:30  INFO 20728 --- [dispatch-service] [main] c.r.d.DispatchServiceApplicationTests    : Started DispatchServiceApplicationTests in 5.866 seconds (process running for 6.914)
+2026-05-05T16:38:44.706+05:30 DEBUG 20728 --- [dispatch-service] [scheduling-1] c.r.d.scheduler.AutoAssignmentScheduler  : Auto-assignment scheduler triggered
+2026-05-05T16:38:46.057+05:30  INFO 20728 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : Technician 20 submitting quote for request 1
+2026-05-05T16:38:46.069+05:30  INFO 20728 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : User approving quote for request 1
+2026-05-05T16:38:46.171+05:30  INFO 20728 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : Request 1 CANCELLED
+2026-05-05T16:38:46.179+05:30  INFO 20728 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : Request 1 CANCELLED
+2026-05-05T16:38:46.208+05:30  INFO 20728 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : Request 1 COMPLETED. Quoted: Rs400.0 | Final: Rs500.0
+2026-05-05T16:38:46.235+05:30  INFO 20728 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : Request 1 COMPLETED. Quoted: Rs400.0 | Final: Rs500.0
+2026-05-05T16:38:46.263+05:30  INFO 20728 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : Request 1 IN_PROGRESS — technician on site
+2026-05-05T16:38:46.281+05:30  INFO 20728 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : User rejecting quote for request 1
+2026-05-05T16:38:46.292+05:30  INFO 20728 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : User rejecting quote for request 1
+2026-05-05T16:38:46.292+05:30  INFO 20728 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : Quote rejected for request 1. Back to PENDING.
+2026-05-05T16:38:46.314+05:30  INFO 20728 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : User approving quote for request 1
+2026-05-05T16:38:46.326+05:30  INFO 20728 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : User approving quote for request 1
+2026-05-05T16:38:46.330+05:30  INFO 20728 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : Quote approved for request 1. Technician 20 now visiting.
+2026-05-05T16:38:46.339+05:30  INFO 20728 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : User approving quote for request 1
+2026-05-05T16:38:46.339+05:30  INFO 20728 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : Quote approved for request 1. Technician 20 now visiting.
+2026-05-05T16:38:46.352+05:30  INFO 20728 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : Technician 20 submitting quote for request 1
+2026-05-05T16:38:46.354+05:30  INFO 20728 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : Quote submitted: ₹400.0 total for request 1
+2026-05-05T16:38:46.365+05:30  INFO 20728 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : Technician 20 submitting quote for request 1
+2026-05-05T16:38:46.366+05:30  INFO 20728 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : Quote submitted: ₹400.0 total for request 1
+2026-05-05T16:38:46.374+05:30  INFO 20728 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : Technician 20 submitting quote for request 1
+2026-05-05T16:38:46.374+05:30  INFO 20728 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : Quote submitted: ₹448.0 total for request 1
+2026-05-05T16:38:46.382+05:30  INFO 20728 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : Technician 20 submitting quote for request 1
+2026-05-05T16:38:46.416+05:30  INFO 20728 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : New service request from userId=10 (sreeja@gmail.com) for ELECTRICIAN
+2026-05-05T16:38:46.416+05:30  INFO 20728 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : ServiceRequest created id=1
+2026-05-05T16:38:46.420+05:30  INFO 20728 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : Broadcasted request 1 to 0 technicians
+2026-05-05T16:38:46.423+05:30  INFO 20728 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : New service request from userId=10 (sreeja@gmail.com) for ELECTRICIAN
+2026-05-05T16:38:46.431+05:30  INFO 20728 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : ServiceRequest created id=1
+2026-05-05T16:38:46.432+05:30  INFO 20728 --- [dispatch-service] [main] c.r.d.service.impl.DispatchServiceImpl   : Broadcasted request 1 to 0 technicians
+2026-05-05T16:38:46.485+05:30  INFO 20728 --- [dispatch-service] [SpringApplicationShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-05-05T16:38:46.492+05:30  INFO 20728 --- [dispatch-service] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-05-05T16:38:46.498+05:30  INFO 20728 --- [dispatch-service] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.

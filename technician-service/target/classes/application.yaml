@@ -1,0 +1,38 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: technician-service
+  datasource:
+    url: jdbc:mysql://mysql:3306/rapidfix_technicians?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    username: root
+    password: root
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+  messages:
+    basename: error-messages
+
+jwt:
+  secret: RapidFixSuperSecretKeyForJWTTokenMustBe256BitsLongEnough!!
+
+services:
+  technician-service:
+    url: http://technician-service:8082
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+logging:
+  level:
+    com.rapidfix: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: /apps/logs/technician-service.log

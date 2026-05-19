@@ -1,0 +1,12 @@
+com\rapidfix\dispatch\service\impl\DispatchServiceImplTest$CompleteRequestTests.class
+com\rapidfix\dispatch\service\impl\DispatchServiceImplTest$CreateRequestTests.class
+com\rapidfix\dispatch\service\impl\DispatchServiceImplTest$StatusLifecycleTests.class
+com\rapidfix\dispatch\service\impl\DispatchServiceImplTest$SubmitQuoteTests.class
+com\rapidfix\dispatch\service\impl\DispatchServiceImplTest$InProgressTests.class
+com\rapidfix\dispatch\service\impl\DispatchServiceImplTest$CancelRequestTests.class
+com\rapidfix\dispatch\service\impl\DispatchServiceImplTest$MarkAsRatedTests.class
+com\rapidfix\dispatch\service\impl\DispatchServiceImplTest$ApproveQuoteTests.class
+com\rapidfix\dispatch\service\impl\DispatchServiceImplTest$GetRequestTests.class
+com\rapidfix\dispatch\service\impl\DispatchServiceImplTest$RejectQuoteTests.class
+com\rapidfix\dispatch\DispatchServiceApplicationTests.class
+com\rapidfix\dispatch\service\impl\DispatchServiceImplTest.class

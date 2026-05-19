@@ -1,0 +1,54 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: dispatch-service
+  datasource:
+    url: jdbc:mysql://mysql:3306/rapidfix_dispatch?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    username: root
+    password: root
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+  messages:
+    basename: error-messages
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  tracing:
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: http://zipkin:9411/api/v2/spans
+jwt:
+  secret: RapidFixSuperSecretKeyForJWTTokenMustBe256BitsLongEnough!!
+
+# Use container name instead of localhost
+services:
+  technician-service:
+    url: http://technician-service:8082
+
+dispatch:
+  broadcast-timeout-seconds: 300
+  auto-assign-radius-km: 15.0
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+logging:
+  level:
+    com.rapidfix: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: /apps/logs/dispatch-service.log

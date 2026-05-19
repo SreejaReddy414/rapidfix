@@ -1,0 +1,9 @@
+com\rapidfix\technician\service\impl\TechnicianServiceImplTest$RegisterTests.class
+com\rapidfix\technician\service\impl\TechnicianServiceImplTest$GetTechnicianTests.class
+com\rapidfix\technician\TechnicianServiceApplicationTests.class
+com\rapidfix\technician\service\impl\TechnicianServiceImplTest$DeleteTests.class
+com\rapidfix\technician\service\impl\TechnicianServiceImplTest.class
+com\rapidfix\technician\service\impl\TechnicianServiceImplTest$NearbySearchTests.class
+com\rapidfix\technician\service\impl\TechnicianServiceImplTest$LocationTests.class
+com\rapidfix\technician\service\impl\TechnicianServiceImplTest$RatingTests.class
+com\rapidfix\technician\service\impl\TechnicianServiceImplTest$AvailabilityTests.class

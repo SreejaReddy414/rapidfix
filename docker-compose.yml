@@ -1,0 +1,189 @@
+version: '3.8'
+
+networks:
+  rapidfix-network:
+    driver: bridge
+
+volumes:
+  mysql-data:
+
+services:
+
+  # ─── MySQL ─────────────────────────────────────────────────
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      TZ: Asia/Kolkata
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - rapidfix-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # ─── User Service ───────────────────────────────────────────
+  user-service:
+    build:
+      context: ./user-service
+      dockerfile: Dockerfile
+    container_name: user-service
+    restart: always
+    ports:
+      - "8081:8081"
+    networks:
+      - rapidfix-network
+    depends_on:
+      mysql:
+        condition: service_healthy
+      zipkin:
+        condition: service_started
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/rapidfix_users?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      TZ: Asia/Kolkata
+    volumes:
+      - ./logs/user:/app/logs        # ← ADD
+
+  # ─── Technician Service ─────────────────────────────────────
+  technician-service:
+    build:
+      context: ./technician-service
+      dockerfile: Dockerfile
+    container_name: technician-service
+    restart: always
+    ports:
+      - "8082:8082"
+    networks:
+      - rapidfix-network
+    depends_on:
+      mysql:
+        condition: service_healthy
+      zipkin:
+        condition: service_started
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/rapidfix_technicians?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      TZ: Asia/Kolkata
+    volumes:
+      - ./logs/technician:/app/logs  # ← ADD
+
+  # ─── Dispatch Service ───────────────────────────────────────
+  dispatch-service:
+    build:
+      context: ./dispatch-service
+      dockerfile: Dockerfile
+    container_name: dispatch-service
+    restart: always
+    ports:
+      - "8083:8083"
+    networks:
+      - rapidfix-network
+    depends_on:
+      mysql:
+        condition: service_healthy
+      technician-service:
+        condition: service_started
+      zipkin:
+        condition: service_started
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/rapidfix_dispatch?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      TZ: Asia/Kolkata
+    volumes:
+      - ./logs/dispatch:/app/logs    # ← ADD
+    # ─── API Gateway ────────────────────────────────────────────
+  gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+    container_name: gateway
+    restart: always
+    ports:
+      - "8080:8080"
+    networks:
+      - rapidfix-network
+    depends_on:
+      - user-service
+      - technician-service
+      - dispatch-service
+      - zipkin
+    environment:
+      TZ: Asia/Kolkata
+      JWT_SECRET: RapidFixSuperSecretKeyForJWTTokenMustBe256BitsLongEnough!!
+    volumes:
+      - ./logs/gateway:/app/logs
+
+  # ─── React Frontend ─────────────────────────────────────────
+  rapidfix-frontend:
+    build:
+      context: ./rapidfix-frontend
+      dockerfile: Dockerfile
+    container_name: rapidfix-frontend
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      TZ: Asia/Kolkata
+    networks:
+      - rapidfix-network
+    depends_on:
+      - user-service
+      - technician-service
+      - dispatch-service
+  # ─── Zipkin ─────────────────────────────────────────────────
+  zipkin:
+    image: openzipkin/zipkin
+    container_name: zipkin
+    restart: always
+    ports:
+      - "9411:9411"
+    networks:
+      - rapidfix-network
+
+  # ─── Splunk ─────────────────────────────────────────────────
+  splunk:
+    image: splunk/splunk:latest
+    container_name: splunk
+    restart: always
+    environment:
+      SPLUNK_START_ARGS: --accept-license
+      SPLUNK_GENERAL_TERMS: --accept-sgt-current-at-splunk-com
+      SPLUNK_HEC_TOKEN: rapidfix-hec-token
+      SPLUNK_PASSWORD: admin1234
+    ports:
+      - "8000:8000"
+      - "8088:8088"
+    networks:
+      - rapidfix-network
+  log-forwarder:
+    image: alpine:latest
+    container_name: log-forwarder
+    restart: always
+    depends_on:
+      - splunk
+      - user-service
+      - technician-service
+      - dispatch-service
+      - gateway
+    volumes:
+      - ./logs/user:/logs/user
+      - ./logs/technician:/logs/technician
+      - ./logs/dispatch:/logs/dispatch
+      - ./logs/gateway:/logs/gateway
+      - ./monitoring/forward-logs.sh:/forward-logs.sh
+    command: sh /forward-logs.sh
+    networks:
+      - rapidfix-network
