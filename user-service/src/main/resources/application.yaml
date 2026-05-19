@@ -2,13 +2,15 @@ server:
   port: 8081
 
 spring:
+  profiles:
+    include: secrets
   application:
     name: user-service
   datasource:
     # Use container name 'mysql' instead of localhost
-    url: jdbc:mysql://mysql:3306/rapidfix_users?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-    username: root
-    password: root
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
@@ -27,8 +29,8 @@ management:
     tracing:
       endpoint: http://zipkin:9411/api/v2/spans
 jwt:
-  secret: RapidFixSuperSecretKeyForJWTTokenMustBe256BitsLongEnough!!
-  expiration-ms: 86400000
+  secret: ${JWT_SECRET}
+  expiration-ms: ${JWT_EXPIRATION_MS:86400000}
 
 springdoc:
   api-docs:

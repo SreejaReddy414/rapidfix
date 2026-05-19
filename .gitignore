@@ -1,0 +1,11 @@
+.env
+**/application-secrets.yml
+**/application-secrets.yaml
+# Logs
+logs/
+
+# Docker volumes
+mysql-data/
+
+# Monitoring
+monitoring/forward-logs.sh

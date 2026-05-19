@@ -2,12 +2,14 @@ server:
   port: 8083
 
 spring:
+  profiles:
+    include: secrets
   application:
     name: dispatch-service
   datasource:
-    url: jdbc:mysql://mysql:3306/rapidfix_dispatch?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-    username: root
-    password: root
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
@@ -28,12 +30,12 @@ management:
     tracing:
       endpoint: http://zipkin:9411/api/v2/spans
 jwt:
-  secret: RapidFixSuperSecretKeyForJWTTokenMustBe256BitsLongEnough!!
+  secret: ${JWT_SECRET}
 
 # Use container name instead of localhost
 services:
   technician-service:
-    url: http://technician-service:8082
+    url: ${TECHNICIAN_SERVICE_URL:http://technician-service:8082}
 
 dispatch:
   broadcast-timeout-seconds: 300

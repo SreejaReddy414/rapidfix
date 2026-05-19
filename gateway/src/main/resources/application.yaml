@@ -2,7 +2,7 @@ server:
   port: 8080
 
 jwt:
-  secret: ${JWT_SECRET:RapidFixSuperSecretKeyForJWTTokenMustBe256BitsLongEnough!!}
+  secret: ${JWT_SECRET}
 
 management:
   endpoints:
@@ -16,6 +16,8 @@ management:
     tracing:
       endpoint: http://zipkin:9411/api/v2/spans
 spring:
+  profiles:
+    include: secrets
   application:
     name: api-gateway
   autoconfigure:
@@ -26,26 +28,26 @@ spring:
     gateway:
       routes:
         - id: auth-routes
-          uri: http://user-service:8081
+          uri: ${USER_SERVICE_URL:http://user-service:8081}
           predicates:
             - Path=/api/auth/**
 
         - id: user-service
-          uri: http://user-service:8081
+          uri: ${USER_SERVICE_URL:http://user-service:8081}
           predicates:
             - Path=/api/users/**
           filters:
             - JwtAuthFilter
 
         - id: technician-service
-          uri: http://technician-service:8082
+          uri: ${TECHNICIAN_SERVICE_URL:http://technician-service:8082}
           predicates:
             - Path=/api/technicians/**
           filters:
             - JwtAuthFilter
 
         - id: dispatch-service
-          uri: http://dispatch-service:8083
+          uri: ${DISPATCH_SERVICE_URL:http://dispatch-service:8083}
           predicates:
             - Path=/api/requests/**
           filters:
