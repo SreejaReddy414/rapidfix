@@ -15,7 +15,7 @@ services:
     container_name: mysql
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: root
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       TZ: Asia/Kolkata
     ports:
       - "3307:3306"
@@ -122,7 +122,7 @@ services:
       - zipkin
     environment:
       TZ: Asia/Kolkata
-      JWT_SECRET: RapidFixSuperSecretKeyForJWTTokenMustBe256BitsLongEnough!!
+      JWT_SECRET:  ${JWT_SECRET}
     volumes:
       - ./logs/gateway:/app/logs
 
@@ -161,13 +161,14 @@ services:
     environment:
       SPLUNK_START_ARGS: --accept-license
       SPLUNK_GENERAL_TERMS: --accept-sgt-current-at-splunk-com
-      SPLUNK_HEC_TOKEN: rapidfix-hec-token
-      SPLUNK_PASSWORD: admin1234
+      SPLUNK_HEC_TOKEN: ${SPLUNK_HEC_TOKEN}
+      SPLUNK_PASSWORD: ${SPLUNK_PASSWORD}
     ports:
       - "8000:8000"
       - "8088:8088"
     networks:
       - rapidfix-network
+
   log-forwarder:
     image: alpine:latest
     container_name: log-forwarder
@@ -178,6 +179,9 @@ services:
       - technician-service
       - dispatch-service
       - gateway
+    environment:
+      SPLUNK_HEC_TOKEN: ${SPLUNK_HEC_TOKEN}
+      SPLUNK_HEC_URL: https://splunk:8088/services/collector/event
     volumes:
       - ./logs/user:/logs/user
       - ./logs/technician:/logs/technician
