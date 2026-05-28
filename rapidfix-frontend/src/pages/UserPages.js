@@ -630,13 +630,34 @@ export function NewRequestPage() {
     if (!navigator.geolocation) { toast.error('Geolocation not supported'); return; }
     setLocLoading(true);
     navigator.geolocation.getCurrentPosition(
-        pos => {
+        async (pos) => {
+          const lat = pos.coords.latitude;
+          const lon = pos.coords.longitude;
+
           setForm(p => ({
             ...p,
-            userLatitude:  pos.coords.latitude.toFixed(6),
-            userLongitude: pos.coords.longitude.toFixed(6),
+            userLatitude:  lat.toFixed(6),
+            userLongitude: lon.toFixed(6),
           }));
-          toast.success('Location detected!');
+
+          // Reverse geocode using allorigins proxy (works with Nominatim)
+          try {
+            const nominatimUrl = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`;
+            const url = `https://api.allorigins.win/get?url=${encodeURIComponent(nominatimUrl)}`;
+            const res = await fetch(url);
+            const json = await res.json();
+            const data = JSON.parse(json.contents);
+            if (data.display_name) {
+              setForm(p => ({ ...p, address: data.display_name }));
+              toast.success('Location & address detected! ✅');
+            } else {
+              toast.success('Location detected!');
+            }
+          } catch (e) {
+            console.error('Reverse geocode failed:', e);
+            toast.success('Location detected! Please type your address manually.');
+          }
+
           setLocLoading(false);
         },
         () => { toast.error('Could not get location'); setLocLoading(false); }
