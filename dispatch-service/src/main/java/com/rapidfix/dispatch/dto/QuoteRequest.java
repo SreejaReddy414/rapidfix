@@ -26,7 +26,7 @@ public class QuoteRequest {
     @Min(value = 0, message = "{validation.travel.charge.min}")
     @Schema(description = "Travel charge in ₹. Leave null to auto-calculate.", example = "48.0")
     private Double travelCharge;
-
+    private String technicianPhone;
     @Size(max = 500, message = "{validation.quote.note.size}")
     @Schema(description = "What you think the problem is and what parts may be needed",
             example = "Likely capacitor issue, may need fan motor replacement")

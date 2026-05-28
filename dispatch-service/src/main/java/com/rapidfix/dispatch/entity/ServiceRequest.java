@@ -52,7 +52,7 @@ public class ServiceRequest {
     @Builder.Default private Integer broadcastAttempts = 0;
     private LocalDateTime broadcastedAt;
     private LocalDateTime completedAt;
-
+    private String technicianPhone;
 
     @CreationTimestamp @Column(updatable = false) private LocalDateTime createdAt;
     @UpdateTimestamp private LocalDateTime updatedAt;
