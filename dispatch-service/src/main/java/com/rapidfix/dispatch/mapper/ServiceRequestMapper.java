@@ -16,6 +16,7 @@ public class ServiceRequestMapper {
                 .hourlyRate(r.getHourlyRate()).estimatedHours(r.getEstimatedHours())
                 .applianceCharge(r.getApplianceCharge()).totalAmount(r.getTotalAmount())
                 .quoteNote(r.getQuoteNote()).quotedAt(r.getQuotedAt())
+                .technicianPhone(r.getTechnicianPhone())
                 .approvedAt(r.getApprovedAt())
                 .distanceKm(r.getDistanceKm())
                 .estimatedArrivalTime(r.getEstimatedArrivalTime())

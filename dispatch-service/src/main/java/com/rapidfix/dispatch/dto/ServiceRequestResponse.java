@@ -17,6 +17,7 @@ public class ServiceRequestResponse {
     private Long technicianId;
     private String technicianName;
     private RequestStatus status;
+    private String technicianPhone;
  //   private LocalDateTime estimatedArrivalTime;
     // Quote — estimated before visit
     private Double hourlyRate;

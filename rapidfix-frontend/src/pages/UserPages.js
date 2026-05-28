@@ -349,6 +349,22 @@ function RequestCard({ request, onRefresh }) {
                   distanceKm={request.distanceKm}
               />
           )}
+          {['APPROVED', 'IN_PROGRESS'].includes(request.status) && request.technicianPhone && (
+              <div style={{
+                padding: '10px 14px', background: 'var(--bg3)',
+                borderRadius: 'var(--radius2)', fontSize: '13px',
+                display: 'flex', justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+        <span style={{ color: 'var(--text2)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            📞 Contact Technician
+        </span>
+                <a href={`tel:${request.technicianPhone}`}
+                   style={{ color: 'var(--accent)', fontWeight: 600, textDecoration: 'none' }}>
+                  {request.technicianPhone}
+                </a>
+              </div>
+          )}
 
           {/* Final amount for completed jobs */}
           {request.status === 'COMPLETED' && request.finalAmount && (
@@ -523,7 +539,83 @@ export function UserDashboard() {
       </PageLayout>
   );
 }
+// ─── ADDRESS AUTOCOMPLETE ─────────────────────────────────────
+function AddressAutocomplete({ value, onChange, onLocationSelect }) {
+  const [suggestions, setSuggestions] = useState([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const debounceRef = React.useRef(null);
 
+  const search = (query) => {
+    onChange(query);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (query.length < 3) { setSuggestions([]); setShowDropdown(false); return; }
+
+    debounceRef.current = setTimeout(async () => {
+      setLoading(true);
+      try {
+        const nominatimUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5&countrycodes=in`;
+        const url = `https://corsproxy.io/?${encodeURIComponent(nominatimUrl)}`;
+        const res = await fetch(url);
+        const data = await res.json();
+        setSuggestions(data);
+        setShowDropdown(true);
+      } catch (e) {
+        console.error('Address search failed:', e);
+      } finally { setLoading(false); }
+    }, 500);
+  };
+
+  const select = (item) => {
+    onChange(item.display_name);
+    onLocationSelect(parseFloat(item.lat), parseFloat(item.lon));
+    setSuggestions([]);
+    setShowDropdown(false);
+  };
+
+  // Close dropdown when clicking outside
+  React.useEffect(() => {
+    const handleClick = () => setShowDropdown(false);
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  return (
+      <div style={{ position: 'relative' }} onMouseDown={e => e.stopPropagation()}>
+        <Input
+            label="Address"
+            placeholder="Start typing your address..."
+            value={value}
+            onChange={e => search(e.target.value)}
+            icon={loading ? <RefreshCw size={15} className="spin" /> : <MapPin size={15} />}
+        />
+        {showDropdown && suggestions.length > 0 && (
+            <div style={{
+              position: 'absolute', top: '100%', left: 0, right: 0,
+              background: 'var(--bg2)', border: '1px solid var(--border)',
+              borderRadius: 'var(--radius2)', zIndex: 100,
+              maxHeight: '200px', overflowY: 'auto',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.3)'
+            }}>
+              {suggestions.map((s, i) => (
+                  <div key={i} onClick={() => select(s)}
+                       style={{
+                         padding: '10px 14px', cursor: 'pointer',
+                         fontSize: '13px', color: 'var(--text2)',
+                         borderBottom: '1px solid var(--border)',
+                       }}
+                       onMouseEnter={e => e.currentTarget.style.background = 'var(--bg3)'}
+                       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <MapPin size={11} style={{ marginRight: '6px', opacity: 0.5 }} />
+                    {s.display_name}
+                  </div>
+              ))}
+            </div>
+        )}
+      </div>
+  );
+}
 // ─── NEW REQUEST ──────────────────────────────────────────────
 export function NewRequestPage() {
   const [form, setForm] = useState({
@@ -595,25 +687,37 @@ export function NewRequestPage() {
                         value={form.description} minLength={10}
                         onChange={e => setForm(p => ({ ...p, description: e.target.value }))} required />
 
-              <Input label="Address" placeholder="Your full address"
-                     icon={<MapPin size={15} />} value={form.address}
-                     onChange={e => setForm(p => ({ ...p, address: e.target.value }))} required />
+              <AddressAutocomplete
+                  value={form.address}
+                  onChange={addr => setForm(p => ({ ...p, address: addr }))}
+                  onLocationSelect={(lat, lon) => {
+                    setForm(p => ({
+                      ...p,
+                      userLatitude: lat.toFixed(6),
+                      userLongitude: lon.toFixed(6)
+                    }));
+                    toast.success('Location auto-detected! ✅');
+                  }}
+              />
 
-              <div>
-                <label style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text2)', display: 'block', marginBottom: '8px' }}>
-                  Your Location
-                </label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
-                  <Input placeholder="Latitude" value={form.userLatitude}
-                         onChange={e => setForm(p => ({ ...p, userLatitude: e.target.value }))} />
-                  <Input placeholder="Longitude" value={form.userLongitude}
-                         onChange={e => setForm(p => ({ ...p, userLongitude: e.target.value }))} />
-                </div>
-                <Button type="button" variant="secondary" size="sm" loading={locLoading}
-                        icon={<MapPin size={13} />} onClick={getLocation}>
-                  Use My Current Location
-                </Button>
-              </div>
+              {/* Show confirmed coordinates */}
+              {form.userLatitude && form.userLongitude && (
+                  <div style={{
+                    padding: '8px 12px', background: 'var(--bg3)',
+                    borderRadius: 'var(--radius2)', fontSize: '12px',
+                    color: 'var(--green)', display: 'flex', alignItems: 'center', gap: '6px'
+                  }}>
+                    <CheckCircle size={12} />
+                    Location set: {form.userLatitude}, {form.userLongitude}
+                  </div>
+              )}
+
+              {/* GPS fallback */}
+              <Button type="button" variant="secondary" size="sm"
+                      loading={locLoading} icon={<MapPin size={13} />}
+                      onClick={getLocation}>
+                Use GPS Instead
+              </Button>
 
               <Divider />
               <div style={{ display: 'flex', gap: '12px' }}>

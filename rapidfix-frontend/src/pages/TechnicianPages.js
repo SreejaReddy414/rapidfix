@@ -53,6 +53,7 @@ function QuoteModal({ job, onClose, onDone }) {
         estimatedHours:  parseFloat(form.estimatedHours),
         applianceCharge: parseFloat(form.applianceCharge || 0),
         quoteNote:       form.quoteNote,
+        technicianPhone: job.technicianPhone || ''
         // travelCharge removed — auto-calculated by system
       });
       toast.success('Quote submitted! Waiting for customer approval.');
@@ -573,7 +574,7 @@ function JobCard({ job, mode, onRefresh, techProfile }) {
           const distKm = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
           return (
               <QuoteModal
-                  job={{ ...job, distanceKm: distKm }}
+                  job={{ ...job, distanceKm: distKm, technicianPhone: techProfile?.phone || '' }}
                   onClose={() => setShowQuote(false)}
                   onDone={onRefresh}
               />

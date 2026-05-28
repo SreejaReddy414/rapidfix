@@ -129,6 +129,7 @@ public class DispatchServiceImpl implements DispatchService {
         sr.setQuoteNote(quote.getQuoteNote());
         sr.setStatus(RequestStatus.QUOTED);
         sr.setQuotedAt(LocalDateTime.now());
+        sr.setTechnicianPhone(quote.getTechnicianPhone());
 
         logAction(requestId, technicianId, "QUOTED",
                 String.format("₹%.0f/hr × %.1fhr + ₹%.0f parts + ₹%.0f travel = ₹%.0f",
