@@ -5,6 +5,7 @@ import { Card, Button, Badge, Empty, LoadingScreen, ServiceIcon, Select, Input, 
 import Navbar from '../components/Navbar';
 import toast from 'react-hot-toast';
 import JobMap from '../components/JobMap';
+import { useNavigate } from 'react-router-dom';
 import {
   CheckCircle, PlayCircle, MapPin, Star,
   RefreshCw, ToggleLeft, ToggleRight, AlertCircle,
@@ -888,31 +889,68 @@ export function BrowseJobsPage() {
   const [jobs,    setJobs]    = useState([]);
   const [loading, setLoading] = useState(false);
   const [profile, setProfile] = useState(null);
-  // activeTab: which of the technician's own service types is selected
   const [activeTab, setActiveTab] = useState(null);
+  const navigate = useNavigate();
 
-  // FIX 4: Load profile and auto-search for technician's OWN service types
   useEffect(() => {
     techAPI.getByUserId(user.id).then(r => {
       setProfile(r.data);
-      // Auto-select first service type the technician offers
       if (r.data.serviceTypes && r.data.serviceTypes.length > 0) {
         const firstType = [...r.data.serviceTypes][0];
         setActiveTab(firstType);
-        searchForType(firstType);
+        searchForType(firstType, r.data);
       }
     }).catch(() => {});
   }, [user.id]);
 
-  const searchForType = async (type) => {
+  const searchForType = async (type, profileData) => {
+    const tech = profileData || profile;
     setActiveTab(type);
     setLoading(true);
     try {
-      const res = await dispatchAPI.getAvailable(type, { page: 0, size: 20 });
-      setJobs(res.data.content || []);
+      const res = await dispatchAPI.getAvailable(type, { page: 0, size: 100 });
+      const allJobs = res.data.content || [];
+
+      // Filter by 20km radius
+      const filtered = tech?.latitude && tech?.longitude
+          ? allJobs.filter(job => {
+            if (!job.userLatitude || !job.userLongitude) return true;
+            const R = 6371;
+            const dLat = (job.userLatitude - tech.latitude) * Math.PI / 180;
+            const dLon = (job.userLongitude - tech.longitude) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2)
+                + Math.cos(tech.latitude * Math.PI / 180)
+                * Math.cos(job.userLatitude * Math.PI / 180)
+                * Math.sin(dLon/2) * Math.sin(dLon/2);
+            const distKm = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return distKm <= 20;
+          })
+          : allJobs;
+
+      setJobs(filtered);
     } catch (e) { toast.error('Failed to load jobs'); }
     finally { setLoading(false); }
   };
+
+  // Block BUSY technicians from browsing
+  if (profile && profile.availabilityStatus === 'BUSY') {
+    return (
+        <PageLayout>
+          <div style={{ animation: 'fadeUp 0.4s ease', textAlign: 'center', marginTop: '60px' }}>
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔧</div>
+            <h2 style={{ fontFamily: 'var(--font-head)', fontSize: '22px', fontWeight: 700, marginBottom: '8px' }}>
+              You're currently on a job
+            </h2>
+            <p style={{ color: 'var(--text2)', fontSize: '14px', marginBottom: '24px' }}>
+              Complete your current job before browsing new requests
+            </p>
+            <Button onClick={() => navigate('/technician/jobs')}>
+              View My Current Job
+            </Button>
+          </div>
+        </PageLayout>
+    );
+  }
 
   return (
       <PageLayout>
@@ -922,15 +960,14 @@ export function BrowseJobsPage() {
               Browse Jobs
             </h1>
             <p style={{ color: 'var(--text2)', marginTop: '6px' }}>
-              Showing open requests for your service types
+              Showing open requests within 20km of your location
             </p>
           </div>
 
-          {/* FIX 4: Show ONLY technician's own service types as tabs */}
           {profile?.serviceTypes && profile.serviceTypes.length > 0 && (
               <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
                 {[...profile.serviceTypes].map(s => (
-                    <button key={s} onClick={() => searchForType(s)} style={{
+                    <button key={s} onClick={() => searchForType(s, profile)} style={{
                       padding: '8px 16px', borderRadius: '20px', border: '1px solid',
                       borderColor: activeTab === s ? 'var(--accent)' : 'var(--border)',
                       background:  activeTab === s ? 'var(--accentbg)' : 'var(--bg3)',
@@ -949,15 +986,18 @@ export function BrowseJobsPage() {
 
           {loading ? <LoadingScreen />
               : jobs.length === 0
-                  ? <Empty icon="🔍" title="No open jobs right now" subtitle="Check back soon or select a different service type" />
+                  ? <Empty icon="🔍" title="No open jobs within 20km"
+                           subtitle="No pending requests in your area right now. Check back soon!" />
                   : (
                       <>
                         <div style={{ fontSize: '13px', color: 'var(--text2)', marginBottom: '14px' }}>
-                          {jobs.length} open job{jobs.length !== 1 ? 's' : ''} for {activeTab?.replace(/_/g, ' ')}
+                          {jobs.length} open job{jobs.length !== 1 ? 's' : ''} within 20km for {activeTab?.replace(/_/g, ' ')}
                         </div>
                         <div style={{ display: 'grid', gap: '12px' }}>
                           {jobs.map(j => (
-                              <JobCard key={j.id} job={j} mode="browse" onRefresh={() => searchForType(activeTab)} techProfile={profile} />
+                              <JobCard key={j.id} job={j} mode="browse"
+                                       onRefresh={() => searchForType(activeTab, profile)}
+                                       techProfile={profile} />
                           ))}
                         </div>
                       </>
