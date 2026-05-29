@@ -1,10 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { dispatchAPI, techAPI } from '../api';
 import { Card, Button, Badge, Empty, LoadingScreen, ServiceIcon, Divider, Textarea, Input, Select } from '../components/UI';
 import Navbar from '../components/Navbar';
 import toast from 'react-hot-toast';
+// ─── LIVE TRACKING MAP ────────────────────────────────────────
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
+import L from 'leaflet';
 import { Plus, MapPin, XCircle, RefreshCw, CheckCircle, Star, IndianRupee, Clock, FileText } from 'lucide-react';
 
 const SERVICE_TYPES = ['ELECTRICIAN','PLUMBER','AC_REPAIR','CARPENTER','PAINTER','CLEANER','APPLIANCE_REPAIR','PEST_CONTROL'];
@@ -258,6 +261,102 @@ function ETABox({ estimatedArrivalTime, distanceKm }) {
   );
 }
 
+// ─── LIVE TRACKING MAP ────────────────────────────────────────
+// ─── LIVE TRACKING MAP ────────────────────────────────────────
+const customerIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34],
+});
+
+const technicianIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34],
+});
+
+function FitBoundsLive({ pos1, pos2 }) {
+  const map = useMap();
+  useEffect(() => {
+    if (pos1 && pos2) {
+      map.fitBounds(L.latLngBounds([pos1, pos2]), { padding: [40, 40] });
+    }
+  }, [pos1, pos2, map]);
+  return null;
+}
+
+function LiveTrackingMap({ userLat, userLon, technicianId }) {
+  const [techLocation, setTechLocation] = useState(null);
+
+  useEffect(() => {
+    if (!technicianId) return;
+
+    const fetchLocation = async () => {
+      try {
+        const res = await techAPI.getByUserId(technicianId);
+        if (res.data?.latitude && res.data?.longitude) {
+          setTechLocation({ lat: res.data.latitude, lon: res.data.longitude });
+        }
+      } catch (e) {}
+    };
+
+    fetchLocation();
+    const interval = setInterval(fetchLocation, 30000);
+    return () => clearInterval(interval);
+  }, [technicianId]);
+
+  const customerPos    = userLat && userLon ? [userLat, userLon] : null;
+  const techPos        = techLocation ? [techLocation.lat, techLocation.lon] : null;
+  const mapCenter      = customerPos || [17.3850, 78.4867];
+
+  if (!customerPos) return null;
+
+  return (
+      <div style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+        {/* Legend */}
+        <div style={{
+          padding: '8px 14px', background: 'var(--bg3)',
+          borderBottom: '1px solid var(--border)',
+          display: 'flex', justifyContent: 'space-between',
+          fontSize: '12px', color: 'var(--text2)',
+        }}>
+          <span>
+            🔴 Your location &nbsp;&nbsp; 🔵 Technician
+          </span>
+          <span style={{ color: 'var(--text3)' }}>
+            {techPos ? '🟢 Live' : '⏳ Locating technician...'}
+          </span>
+        </div>
+
+        <MapContainer
+            center={mapCenter}
+            zoom={13}
+            style={{ height: '260px', width: '100%' }}
+            scrollWheelZoom={false}
+        >
+          <TileLayer
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              attribution='&copy; OpenStreetMap contributors'
+          />
+
+          <FitBoundsLive pos1={customerPos} pos2={techPos} />
+
+          {/* Customer — red pin */}
+          <Marker position={customerPos} icon={customerIcon}>
+            <Popup>📍 Your Location</Popup>
+          </Marker>
+
+          {/* Technician — blue pin (updates every 30 sec) */}
+          {techPos && (
+              <Marker position={techPos} icon={technicianIcon}>
+                <Popup>🔧 Technician (live)</Popup>
+              </Marker>
+          )}
+        </MapContainer>
+      </div>
+  );
+}
+
 // ─── REQUEST CARD ─────────────────────────────────────────────
 function RequestCard({ request, onRefresh }) {
   const [cancelLoading,  setCancelLoading]  = useState(false);
@@ -349,6 +448,15 @@ function RequestCard({ request, onRefresh }) {
                   distanceKm={request.distanceKm}
               />
           )}
+          {/* Live tracking map ← ADD THIS */}
+          {['APPROVED', 'IN_PROGRESS'].includes(request.status) &&
+              request.userLatitude && request.technicianId && (
+                  <LiveTrackingMap
+                      userLat={request.userLatitude}
+                      userLon={request.userLongitude}
+                      technicianId={request.technicianId}
+                  />
+              )}
           {['APPROVED', 'IN_PROGRESS'].includes(request.status) && request.technicianPhone && (
               <div style={{
                 padding: '10px 14px', background: 'var(--bg3)',

@@ -337,7 +337,6 @@ function CompleteModal({ job, onClose, onDone }) {
 }
 
 // ─── JOB CARD ─────────────────────────────────────────────────
-// ─── JOB CARD ─────────────────────────────────────────────────
 function JobCard({ job, mode, onRefresh, techProfile }) {
   const [loading,      setLoading]      = useState('');
   const [showQuote,    setShowQuote]    = useState(false);
@@ -345,6 +344,22 @@ function JobCard({ job, mode, onRefresh, techProfile }) {
   const [showMap,      setShowMap]      = useState(false);
 
   const statusKey = job.status?.toLowerCase();
+  useEffect(() => {
+    if (!['APPROVED', 'IN_PROGRESS'].includes(job.status) || !techProfile?.id) return;
+
+    const sendLocation = () => {
+      navigator.geolocation.getCurrentPosition(pos => {
+        techAPI.updateLocation(techProfile.id, {
+          latitude:  pos.coords.latitude,
+          longitude: pos.coords.longitude,
+        }).catch(() => {}); // silent fail
+      }, () => {}); // silent fail if no GPS
+    };
+
+    sendLocation(); // send immediately on mount
+    const interval = setInterval(sendLocation, 30000); // every 30 sec
+    return () => clearInterval(interval); // cleanup on unmount
+  }, [job.status, techProfile?.id]);
 
   const action = async (fn, label, successMsg) => {
     setLoading(label);
@@ -933,7 +948,7 @@ export function BrowseJobsPage() {
   };
 
   // Block BUSY technicians from browsing
-  if (profile && profile.availabilityStatus === 'BUSY') {
+  if (profile && (profile.availabilityStatus === 'BUSY')) {
     return (
         <PageLayout>
           <div style={{ animation: 'fadeUp 0.4s ease', textAlign: 'center', marginTop: '60px' }}>
@@ -949,8 +964,23 @@ export function BrowseJobsPage() {
             </Button>
           </div>
         </PageLayout>
-    );
-  }
+    );}
+    if (profile && (profile.availabilityStatus === 'OFFLINE')) {
+      return (
+          <PageLayout>
+            <div style={{animation: 'fadeUp 0.4s ease', textAlign: 'center', marginTop: '60px'}}>
+              <div style={{fontSize: '48px', marginBottom: '16px'}}>🔧</div>
+              <h2 style={{fontFamily: 'var(--font-head)', fontSize: '22px', fontWeight: 700, marginBottom: '8px'}}>
+                You're currently offline
+              </h2>
+              <p style={{color: 'var(--text2)', fontSize: '14px', marginBottom: '24px'}}>
+                Please set your availability to online before browsing new requests
+              </p>
+
+            </div>
+          </PageLayout>
+      );
+    }
 
   return (
       <PageLayout>
