@@ -30,7 +30,7 @@
   --transition: 0.2s ease;
 }
 
-html { font-size: 16px; }
+html { font-size: 16px; scroll-behavior: smooth; }
 
 body {
   font-family: var(--font);
@@ -46,7 +46,7 @@ body {
 ::-webkit-scrollbar-track { background: var(--bg2); }
 ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
 
-/* Animations */
+/* ─── Animations ───────────────────────────────────────────── */
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(16px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -66,9 +66,36 @@ body {
   0%   { background-position: -200% 0; }
   100% { background-position: 200% 0; }
 }
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-8px); }
+}
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 8px 32px rgba(255,107,43,0.3); }
+  50%       { box-shadow: 0 8px 48px rgba(255,107,43,0.6); }
+}
 
 .animate-fade-up  { animation: fadeUp 0.4s ease forwards; }
 .animate-fade-in  { animation: fadeIn 0.3s ease forwards; }
+.animate-float    { animation: float 3s ease-in-out infinite; }
+.animate-glow     { animation: glow-pulse 2s ease-in-out infinite; }
+
+/* ─── Responsive: Landing Page ─────────────────────────────── */
+@media (max-width: 900px) {
+  /* hero grid becomes single column */
+  .hero-grid { grid-template-columns: 1fr !important; }
+  .stat-grid { grid-template-columns: repeat(2, 1fr) !important; }
+  .service-grid { grid-template-columns: repeat(2, 1fr) !important; }
+  .hiw-grid { grid-template-columns: repeat(2, 1fr) !important; }
+  .review-grid { grid-template-columns: 1fr !important; }
+}
+
+@media (max-width: 600px) {
+  .stat-grid { grid-template-columns: repeat(2, 1fr) !important; }
+  .service-grid { grid-template-columns: repeat(2, 1fr) !important; }
+  .hiw-grid { grid-template-columns: 1fr !important; }
+  .landing-nav-links { display: none !important; }
+}
 
 /* Utility */
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }

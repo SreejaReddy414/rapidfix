@@ -9,3 +9,5 @@ mysql-data/
 
 # Monitoring
 monitoring/forward-logs.sh
+
+.idea

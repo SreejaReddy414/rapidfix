@@ -5,6 +5,7 @@ import com.rapidfix.dispatch.entity.*;
 import com.rapidfix.dispatch.exception.*;
 import com.rapidfix.dispatch.mapper.ServiceRequestMapper;
 import com.rapidfix.dispatch.repository.*;
+import com.rapidfix.dispatch.util.MessageService;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
@@ -35,7 +36,8 @@ class DispatchServiceImplTest {
     @Mock private WebClient.RequestBodyUriSpec requestBodyUriSpec;
     @Mock private WebClient.RequestBodySpec requestBodySpec;
 
-    @InjectMocks private DispatchServiceImpl service;
+    private final MessageService messages = new MessageService();
+    private DispatchServiceImpl service;
 
     // ─── Test data ────────────────────────────────────────────
     private ServiceRequest pendingRequest;
@@ -49,6 +51,7 @@ class DispatchServiceImplTest {
 
     @BeforeEach
     void setUp() {
+        service = new DispatchServiceImpl(requestRepo, logRepo, mapper, technicianWebClient, messages);
         pendingRequest = ServiceRequest.builder()
                 .id(1L).userId(10L).userName("sreeja@gmail.com")
                 .serviceType(ServiceType.ELECTRICIAN)
@@ -230,10 +233,11 @@ class DispatchServiceImplTest {
         }
 
         @Test
-        @DisplayName("Should include travelCharge in total when provided")
+        @DisplayName("Should include travelCharge in total when distance is set")
         void submitQuote_withTravelCharge() {
-            quoteRequest.setTravelCharge(48.0);
-            // 100 × 2 + 200 + 48 = 448
+            // distance = 7km → travel = (7 - 3) × 12 = 48.0 → total = 400 + 48 = 448
+            pendingRequest.setDistanceKm(7.0);
+
             when(requestRepo.findById(1L)).thenReturn(Optional.of(pendingRequest));
             when(requestRepo.save(any())).thenReturn(quotedRequest);
             when(mapper.toResponse(any())).thenReturn(requestResponse);

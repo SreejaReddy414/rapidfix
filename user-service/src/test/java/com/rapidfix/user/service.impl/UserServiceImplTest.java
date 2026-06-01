@@ -6,6 +6,7 @@ import com.rapidfix.user.exception.*;
 import com.rapidfix.user.mapper.UserMapper;
 import com.rapidfix.user.repository.UserRepository;
 import com.rapidfix.user.security.JwtUtil;
+import com.rapidfix.user.util.MessageService;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
@@ -26,9 +27,8 @@ class UserServiceImplTest {
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private JwtUtil jwtUtil;
     @Mock private UserMapper userMapper;
-
-    @InjectMocks private UserServiceImpl service;
-
+    private final MessageService messages = new MessageService();
+    private UserServiceImpl service;
     // ─── Test data ────────────────────────────────────────────
     private UserRequest userRequest;
     private LoginRequest loginRequest;
@@ -38,6 +38,7 @@ class UserServiceImplTest {
 
     @BeforeEach
     void setUp() {
+        service = new UserServiceImpl(userRepository, passwordEncoder, jwtUtil, userMapper, messages);
         userRequest = UserRequest.builder()
                 .name("Sreeja Reddy")
                 .email("sreeja@gmail.com")

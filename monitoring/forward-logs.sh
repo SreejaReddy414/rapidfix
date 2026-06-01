@@ -33,7 +33,7 @@ forward() {
 forward "user-service"       "/logs/user/user-service.log"
 forward "technician-service" "/logs/technician/technician-service.log"
 forward "dispatch-service"   "/logs/dispatch/dispatch-service.log"
-forward "gateway"            "/logs/gateway/gateway.log"
+forward "gateway"            "/logs/gateway/api-gateway.log"
 
 echo "Log forwarder running..."
 wait
