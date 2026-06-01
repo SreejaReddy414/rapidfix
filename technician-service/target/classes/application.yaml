@@ -2,12 +2,14 @@ server:
   port: 8082
 
 spring:
+  profiles:
+    include: secrets
   application:
     name: technician-service
   datasource:
-    url: jdbc:mysql://mysql:3306/rapidfix_technicians?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-    username: root
-    password: root
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
@@ -16,8 +18,20 @@ spring:
   messages:
     basename: error-messages
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  tracing:
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: http://zipkin:9411/api/v2/spans
+
 jwt:
-  secret: RapidFixSuperSecretKeyForJWTTokenMustBe256BitsLongEnough!!
+  secret: ${JWT_SECRET}
 
 services:
   technician-service:

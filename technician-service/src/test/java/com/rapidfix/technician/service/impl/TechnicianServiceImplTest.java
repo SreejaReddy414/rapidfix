@@ -5,6 +5,7 @@ import com.rapidfix.technician.entity.*;
 import com.rapidfix.technician.exception.ResourceNotFoundException;
 import com.rapidfix.technician.mapper.TechnicianMapper;
 import com.rapidfix.technician.repository.TechnicianRepository;
+import com.rapidfix.technician.util.MessageService;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
@@ -22,7 +23,8 @@ class TechnicianServiceImplTest {
     @Mock private TechnicianRepository repo;
     @Mock private TechnicianMapper mapper;
 
-    @InjectMocks private TechnicianServiceImpl service;
+    private final MessageService messages = new MessageService();
+    private TechnicianServiceImpl service;
 
     // ─── Test data ────────────────────────────────────────────
     private Technician technician;
@@ -31,6 +33,7 @@ class TechnicianServiceImplTest {
 
     @BeforeEach
     void setUp() {
+        service = new TechnicianServiceImpl(repo, mapper, messages);
         technician = Technician.builder()
                 .id(1L).userId(2L)
                 .name("Dilip").email("dilip@gmail.com")
