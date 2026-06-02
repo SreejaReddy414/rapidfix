@@ -25,7 +25,7 @@ public class DispatchServiceImpl implements DispatchService {
     private final DispatchLogRepository logRepo;
     private final ServiceRequestMapper mapper;
     private final WebClient technicianWebClient;
-    private final MessageService messages;   // ← ADD
+    private final MessageService messages;
 
     @Value("${dispatch.broadcast-timeout-seconds:60}")
     private int broadcastTimeoutSeconds;
