@@ -53,7 +53,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: root
       TZ: Asia/Kolkata
     volumes:
-      - ./logs/user:/app/logs        # ← ADD
+      - ./logs/user:/app/logs
 
   # ─── Technician Service ─────────────────────────────────────
   technician-service:
@@ -77,7 +77,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: root
       TZ: Asia/Kolkata
     volumes:
-      - ./logs/technician:/app/logs  # ← ADD
+      - ./logs/technician:/app/logs
 
   # ─── Dispatch Service ───────────────────────────────────────
   dispatch-service:
@@ -103,8 +103,19 @@ services:
       SPRING_DATASOURCE_PASSWORD: root
       TZ: Asia/Kolkata
     volumes:
-      - ./logs/dispatch:/app/logs    # ← ADD
-    # ─── API Gateway ────────────────────────────────────────────
+      - ./logs/dispatch:/app/logs
+
+  # ─── Redis ──────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: always
+    ports:
+      - "6379:6379"
+    networks:
+      - rapidfix-network
+
+  # ─── API Gateway ────────────────────────────────────────────
   gateway:
     build:
       context: ./gateway
@@ -120,9 +131,11 @@ services:
       - technician-service
       - dispatch-service
       - zipkin
+      - redis
     environment:
       TZ: Asia/Kolkata
-      JWT_SECRET:  ${JWT_SECRET}
+      JWT_SECRET: ${JWT_SECRET}
+      REDIS_HOST: redis
     volumes:
       - ./logs/gateway:/app/logs
 
@@ -143,6 +156,7 @@ services:
       - user-service
       - technician-service
       - dispatch-service
+
   # ─── Zipkin ─────────────────────────────────────────────────
   zipkin:
     image: openzipkin/zipkin
@@ -169,6 +183,7 @@ services:
     networks:
       - rapidfix-network
 
+  # ─── Log Forwarder ──────────────────────────────────────────
   log-forwarder:
     image: alpine:latest
     container_name: log-forwarder

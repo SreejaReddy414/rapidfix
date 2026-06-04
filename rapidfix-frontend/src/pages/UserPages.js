@@ -12,6 +12,49 @@ import { Plus, MapPin, XCircle, RefreshCw, CheckCircle, Star, IndianRupee, Clock
 
 const SERVICE_TYPES = ['ELECTRICIAN','PLUMBER','AC_REPAIR','CARPENTER','PAINTER','CLEANER','APPLIANCE_REPAIR','PEST_CONTROL'];
 
+const PAGE_SIZE = 5;
+
+// ─── PAGINATION ───────────────────────────────────────────────
+function Pagination({ currentPage, totalPages, onPageChange }) {
+  if (totalPages <= 1) return null;
+  return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginTop: '20px' }}>
+        <button
+            onClick={() => onPageChange(currentPage - 1)}
+            disabled={currentPage === 0}
+            style={{
+              padding: '6px 14px', borderRadius: 'var(--radius2)', border: '1px solid var(--border)',
+              background: 'var(--bg3)', color: currentPage === 0 ? 'var(--text3)' : 'var(--text2)',
+              cursor: currentPage === 0 ? 'not-allowed' : 'pointer', fontSize: '13px',
+              fontFamily: 'var(--font)', transition: 'all var(--transition)',
+            }}
+        >← Prev</button>
+
+        {Array.from({ length: totalPages }, (_, i) => (
+            <button key={i} onClick={() => onPageChange(i)} style={{
+              width: '34px', height: '34px', borderRadius: 'var(--radius2)', border: '1px solid',
+              borderColor: i === currentPage ? 'var(--accent)' : 'var(--border)',
+              background: i === currentPage ? 'var(--accentbg)' : 'var(--bg3)',
+              color: i === currentPage ? 'var(--accent)' : 'var(--text2)',
+              cursor: 'pointer', fontSize: '13px', fontWeight: i === currentPage ? 700 : 400,
+              fontFamily: 'var(--font)', transition: 'all var(--transition)',
+            }}>{i + 1}</button>
+        ))}
+
+        <button
+            onClick={() => onPageChange(currentPage + 1)}
+            disabled={currentPage === totalPages - 1}
+            style={{
+              padding: '6px 14px', borderRadius: 'var(--radius2)', border: '1px solid var(--border)',
+              background: 'var(--bg3)', color: currentPage === totalPages - 1 ? 'var(--text3)' : 'var(--text2)',
+              cursor: currentPage === totalPages - 1 ? 'not-allowed' : 'pointer', fontSize: '13px',
+              fontFamily: 'var(--font)', transition: 'all var(--transition)',
+            }}
+        >Next →</button>
+      </div>
+  );
+}
+
 function PageLayout({ children }) {
   return (
       <>
@@ -562,6 +605,7 @@ export function UserDashboard() {
   const { user }  = useAuth();
   const [requests, setRequests] = useState([]);
   const [loading,  setLoading]  = useState(true);
+  const [page,     setPage]     = useState(0);
   const navigate = useNavigate();
 
   const load = async () => {
@@ -639,9 +683,19 @@ export function UserDashboard() {
 
           {loading ? <LoadingScreen /> : requests.length === 0
               ? <Empty icon="📋" title="No requests yet" subtitle="Create your first service request" />
-              : <div style={{ display: 'grid', gap: '12px' }}>
-                {requests.map(r => <RequestCard key={r.id} request={r} onRefresh={load} />)}
-              </div>
+              : (() => {
+                const totalPages = Math.ceil(requests.length / PAGE_SIZE);
+                const safePage = Math.min(page, totalPages - 1);
+                const paged = requests.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE);
+                return (
+                    <>
+                      <div style={{ display: 'grid', gap: '12px' }}>
+                        {paged.map(r => <RequestCard key={r.id} request={r} onRefresh={load} />)}
+                      </div>
+                      <Pagination currentPage={safePage} totalPages={totalPages} onPageChange={setPage} />
+                    </>
+                );
+              })()
           }
         </div>
       </PageLayout>
@@ -870,6 +924,7 @@ export function UserRequestsPage() {
   const [requests, setRequests] = useState([]);
   const [loading,  setLoading]  = useState(true);
   const [filter,   setFilter]   = useState('ALL');
+  const [page,     setPage]     = useState(0);
 
   const load = async () => {
     setLoading(true);
@@ -885,6 +940,8 @@ export function UserRequestsPage() {
   const STATUS_FILTERS = ['ALL','PENDING','QUOTED','APPROVED','IN_PROGRESS','COMPLETED','CANCELLED'];
   const filtered = filter === 'ALL' ? requests : requests.filter(r => r.status === filter);
 
+  const handleFilterChange = (f) => { setFilter(f); setPage(0); };
+
   return (
       <PageLayout>
         <div style={{ animation: 'fadeUp 0.4s ease' }}>
@@ -897,7 +954,7 @@ export function UserRequestsPage() {
 
           <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
             {STATUS_FILTERS.map(s => (
-                <button key={s} onClick={() => setFilter(s)} style={{
+                <button key={s} onClick={() => handleFilterChange(s)} style={{
                   padding: '5px 14px', borderRadius: '20px', border: '1px solid',
                   borderColor: filter === s ? 'var(--accent)' : 'var(--border)',
                   background:  filter === s ? 'var(--accentbg)' : 'transparent',
@@ -910,9 +967,22 @@ export function UserRequestsPage() {
 
           {loading ? <LoadingScreen /> : filtered.length === 0
               ? <Empty icon="📋" title="No requests found" subtitle="Try a different filter" />
-              : <div style={{ display: 'grid', gap: '12px' }}>
-                {filtered.map(r => <RequestCard key={r.id} request={r} onRefresh={load} />)}
-              </div>
+              : (() => {
+                const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+                const safePage = Math.min(page, totalPages - 1);
+                const paged = filtered.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE);
+                return (
+                    <>
+                      <div style={{ fontSize: '12px', color: 'var(--text3)', marginBottom: '10px' }}>
+                        Showing {safePage * PAGE_SIZE + 1}–{Math.min((safePage + 1) * PAGE_SIZE, filtered.length)} of {filtered.length}
+                      </div>
+                      <div style={{ display: 'grid', gap: '12px' }}>
+                        {paged.map(r => <RequestCard key={r.id} request={r} onRefresh={load} />)}
+                      </div>
+                      <Pagination currentPage={safePage} totalPages={totalPages} onPageChange={setPage} />
+                    </>
+                );
+              })()
           }
         </div>
       </PageLayout>

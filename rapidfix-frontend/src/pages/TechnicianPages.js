@@ -15,6 +15,49 @@ import {
 
 const SERVICE_TYPES = ['ELECTRICIAN','PLUMBER','AC_REPAIR','CARPENTER','PAINTER','CLEANER','APPLIANCE_REPAIR','PEST_CONTROL'];
 
+const PAGE_SIZE = 5;
+
+// ─── PAGINATION ───────────────────────────────────────────────
+function Pagination({ currentPage, totalPages, onPageChange }) {
+  if (totalPages <= 1) return null;
+  return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginTop: '20px' }}>
+        <button
+            onClick={() => onPageChange(currentPage - 1)}
+            disabled={currentPage === 0}
+            style={{
+              padding: '6px 14px', borderRadius: 'var(--radius2)', border: '1px solid var(--border)',
+              background: 'var(--bg3)', color: currentPage === 0 ? 'var(--text3)' : 'var(--text2)',
+              cursor: currentPage === 0 ? 'not-allowed' : 'pointer', fontSize: '13px',
+              fontFamily: 'var(--font)', transition: 'all var(--transition)',
+            }}
+        >← Prev</button>
+
+        {Array.from({ length: totalPages }, (_, i) => (
+            <button key={i} onClick={() => onPageChange(i)} style={{
+              width: '34px', height: '34px', borderRadius: 'var(--radius2)', border: '1px solid',
+              borderColor: i === currentPage ? 'var(--accent)' : 'var(--border)',
+              background: i === currentPage ? 'var(--accentbg)' : 'var(--bg3)',
+              color: i === currentPage ? 'var(--accent)' : 'var(--text2)',
+              cursor: 'pointer', fontSize: '13px', fontWeight: i === currentPage ? 700 : 400,
+              fontFamily: 'var(--font)', transition: 'all var(--transition)',
+            }}>{i + 1}</button>
+        ))}
+
+        <button
+            onClick={() => onPageChange(currentPage + 1)}
+            disabled={currentPage === totalPages - 1}
+            style={{
+              padding: '6px 14px', borderRadius: 'var(--radius2)', border: '1px solid var(--border)',
+              background: 'var(--bg3)', color: currentPage === totalPages - 1 ? 'var(--text3)' : 'var(--text2)',
+              cursor: currentPage === totalPages - 1 ? 'not-allowed' : 'pointer', fontSize: '13px',
+              fontFamily: 'var(--font)', transition: 'all var(--transition)',
+            }}
+        >Next →</button>
+      </div>
+  );
+}
+
 function PageLayout({ children }) {
   return (
       <>
@@ -176,13 +219,13 @@ function CompleteModal({ job, onClose, onDone }) {
   const [completionNote,   setCompletionNote]   = useState('');
   const [loading,          setLoading]          = useState(false);
 
-    const travelCharge = job.travelCharge || 0;
+  const travelCharge = job.travelCharge || 0;
 
-    const finalAmt = actualHours && applianceCharge !== ''
-        ? (parseFloat(job.hourlyRate) * parseFloat(actualHours))
-        + parseFloat(applianceCharge)
-        + travelCharge  // ← ADD THIS
-        : null;
+  const finalAmt = actualHours && applianceCharge !== ''
+      ? (parseFloat(job.hourlyRate) * parseFloat(actualHours))
+      + parseFloat(applianceCharge)
+      + travelCharge  // ← ADD THIS
+      : null;
 
   const submit = async (e) => {
     e.preventDefault();
@@ -283,30 +326,30 @@ function CompleteModal({ job, onClose, onDone }) {
                 </span>
                     <span>₹{(parseFloat(job.hourlyRate) * parseFloat(actualHours)).toFixed(0)}</span>
                   </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
-                        <span style={{ color: 'var(--text3)' }}>Actual Parts / Appliances</span>
-                        <span>₹{parseFloat(applianceCharge).toFixed(0)}</span>
-                    </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
+                    <span style={{ color: 'var(--text3)' }}>Actual Parts / Appliances</span>
+                    <span>₹{parseFloat(applianceCharge).toFixed(0)}</span>
+                  </div>
 
-                    {/* Travel charge — read only, already saved */}
-                    {travelCharge > 0 && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
+                  {/* Travel charge — read only, already saved */}
+                  {travelCharge > 0 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
         <span style={{ color: 'var(--text3)', display: 'flex', alignItems: 'center', gap: '4px' }}>
             <MapPin size={12} /> Travel charge ({job.distanceKm?.toFixed(1)}km)
         </span>
-                            <span>₹{travelCharge.toFixed(0)}</span>
-                        </div>
-                    )}
-                    {travelCharge === 0 && job.distanceKm > 0 && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
+                        <span>₹{travelCharge.toFixed(0)}</span>
+                      </div>
+                  )}
+                  {travelCharge === 0 && job.distanceKm > 0 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
         <span style={{ color: 'var(--text3)', display: 'flex', alignItems: 'center', gap: '4px' }}>
             <MapPin size={12} /> Travel ({job.distanceKm?.toFixed(1)}km)
         </span>
-                            <span style={{ color: '#22c55e' }}>FREE</span>
-                        </div>
-                    )}
+                        <span style={{ color: '#22c55e' }}>FREE</span>
+                      </div>
+                  )}
 
-                    <Divider style={{ margin: '6px 0' }} />
+                  <Divider style={{ margin: '6px 0' }} />
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: '15px' }}>
                     <span>Final Amount</span>
                     <span style={{ color: 'var(--green)' }}>₹{finalAmt.toFixed(0)}</span>
@@ -732,6 +775,7 @@ export function TechnicianDashboard() {
   const [availLoading,   setAvailLoading]   = useState(false);
   const [locLoading,     setLocLoading]     = useState(false);
   const [setupNeeded,    setSetupNeeded]    = useState(false);
+  const [page,           setPage]           = useState(0);
 
   const loadProfile = useCallback(async () => {
     try {
@@ -887,11 +931,21 @@ export function TechnicianDashboard() {
 
           {jobs.length === 0
               ? <Empty icon="💼" title="No jobs yet" subtitle="Go online and browse available jobs" />
-              : <div style={{ display: 'grid', gap: '12px' }}>
-                {jobs.slice(0, 5).map(j => (
-                    <JobCard key={j.id} job={j} mode="mine" onRefresh={handleRefresh} techProfile={profile} />
-                ))}
-              </div>
+              : (() => {
+                const totalPages = Math.ceil(jobs.length / PAGE_SIZE);
+                const safePage = Math.min(page, totalPages - 1);
+                const paged = jobs.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE);
+                return (
+                    <>
+                      <div style={{ display: 'grid', gap: '12px' }}>
+                        {paged.map(j => (
+                            <JobCard key={j.id} job={j} mode="mine" onRefresh={handleRefresh} techProfile={profile} />
+                        ))}
+                      </div>
+                      <Pagination currentPage={safePage} totalPages={totalPages} onPageChange={setPage} />
+                    </>
+                );
+              })()
           }
         </div>
       </PageLayout>
@@ -965,22 +1019,22 @@ export function BrowseJobsPage() {
           </div>
         </PageLayout>
     );}
-    if (profile && (profile.availabilityStatus === 'OFFLINE')) {
-      return (
-          <PageLayout>
-            <div style={{animation: 'fadeUp 0.4s ease', textAlign: 'center', marginTop: '60px'}}>
-              <div style={{fontSize: '48px', marginBottom: '16px'}}>🔧</div>
-              <h2 style={{fontFamily: 'var(--font-head)', fontSize: '22px', fontWeight: 700, marginBottom: '8px'}}>
-                You're currently offline
-              </h2>
-              <p style={{color: 'var(--text2)', fontSize: '14px', marginBottom: '24px'}}>
-                Please set your availability to online before browsing new requests
-              </p>
+  if (profile && (profile.availabilityStatus === 'OFFLINE')) {
+    return (
+        <PageLayout>
+          <div style={{animation: 'fadeUp 0.4s ease', textAlign: 'center', marginTop: '60px'}}>
+            <div style={{fontSize: '48px', marginBottom: '16px'}}>🔧</div>
+            <h2 style={{fontFamily: 'var(--font-head)', fontSize: '22px', fontWeight: 700, marginBottom: '8px'}}>
+              You're currently offline
+            </h2>
+            <p style={{color: 'var(--text2)', fontSize: '14px', marginBottom: '24px'}}>
+              Please set your availability to online before browsing new requests
+            </p>
 
-            </div>
-          </PageLayout>
-      );
-    }
+          </div>
+        </PageLayout>
+    );
+  }
 
   return (
       <PageLayout>
@@ -1045,6 +1099,7 @@ export function MyJobsPage() {
   const [jobs,    setJobs]    = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter,  setFilter]  = useState('ALL');
+  const [page,    setPage]    = useState(0);
 
   useEffect(() => {
     techAPI.getByUserId(user.id).then(r => {
@@ -1066,6 +1121,7 @@ export function MyJobsPage() {
 
   const STATUS_FILTERS = ['ALL','QUOTED','APPROVED','IN_PROGRESS','COMPLETED','CANCELLED'];
   const filtered = filter === 'ALL' ? jobs : jobs.filter(j => j.status === filter);
+  const handleFilterChange = (f) => { setFilter(f); setPage(0); };
 
   return (
       <PageLayout>
@@ -1079,7 +1135,7 @@ export function MyJobsPage() {
 
           <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
             {STATUS_FILTERS.map(s => (
-                <button key={s} onClick={() => setFilter(s)} style={{
+                <button key={s} onClick={() => handleFilterChange(s)} style={{
                   padding: '5px 14px', borderRadius: '20px', border: '1px solid',
                   borderColor: filter === s ? 'var(--accent)' : 'var(--border)',
                   background:  filter === s ? 'var(--accentbg)' : 'transparent',
@@ -1092,9 +1148,22 @@ export function MyJobsPage() {
 
           {loading ? <LoadingScreen /> : filtered.length === 0
               ? <Empty icon="💼" title="No jobs found" subtitle="Submit quotes from Browse Jobs tab" />
-              : <div style={{ display: 'grid', gap: '12px' }}>
-                {filtered.map(j => <JobCard key={j.id} job={j} mode="mine" onRefresh={reload} techProfile={profile}/>)}
-              </div>
+              : (() => {
+                const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+                const safePage = Math.min(page, totalPages - 1);
+                const paged = filtered.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE);
+                return (
+                    <>
+                      <div style={{ fontSize: '12px', color: 'var(--text3)', marginBottom: '10px' }}>
+                        Showing {safePage * PAGE_SIZE + 1}–{Math.min((safePage + 1) * PAGE_SIZE, filtered.length)} of {filtered.length}
+                      </div>
+                      <div style={{ display: 'grid', gap: '12px' }}>
+                        {paged.map(j => <JobCard key={j.id} job={j} mode="mine" onRefresh={reload} techProfile={profile}/>)}
+                      </div>
+                      <Pagination currentPage={safePage} totalPages={totalPages} onPageChange={setPage} />
+                    </>
+                );
+              })()
           }
         </div>
       </PageLayout>
