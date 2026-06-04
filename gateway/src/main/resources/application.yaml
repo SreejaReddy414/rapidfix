@@ -15,7 +15,12 @@ management:
   zipkin:
     tracing:
       endpoint: http://zipkin:9411/api/v2/spans
+
 spring:
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: 6379
   profiles:
     include: secrets
   application:
@@ -31,6 +36,11 @@ spring:
           uri: ${USER_SERVICE_URL:http://user-service:8081}
           predicates:
             - Path=/api/auth/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter: "#{@redisRateLimiter}"
+                key-resolver: "#{@ipKeyResolver}"
 
         - id: user-service
           uri: ${USER_SERVICE_URL:http://user-service:8081}
@@ -38,6 +48,10 @@ spring:
             - Path=/api/users/**
           filters:
             - JwtAuthFilter
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter: "#{@redisRateLimiter}"
+                key-resolver: "#{@ipKeyResolver}"
 
         - id: technician-service
           uri: ${TECHNICIAN_SERVICE_URL:http://technician-service:8082}
@@ -45,6 +59,10 @@ spring:
             - Path=/api/technicians/**
           filters:
             - JwtAuthFilter
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter: "#{@redisRateLimiter}"
+                key-resolver: "#{@ipKeyResolver}"
 
         - id: dispatch-service
           uri: ${DISPATCH_SERVICE_URL:http://dispatch-service:8083}
@@ -52,3 +70,7 @@ spring:
             - Path=/api/requests/**
           filters:
             - JwtAuthFilter
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter: "#{@redisRateLimiter}"
+                key-resolver: "#{@ipKeyResolver}"

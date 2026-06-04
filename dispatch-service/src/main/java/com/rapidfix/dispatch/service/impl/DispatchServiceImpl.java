@@ -283,7 +283,7 @@ public class DispatchServiceImpl implements DispatchService {
                         (t.getRating() * 0.6) + ((10.0 - Math.min(t.getDistanceKm(), 10.0)) * 0.4)))
                 .orElseThrow();
 
-        double defaultRate  = 100.0;
+        double defaultRate  = 300.0;
         double defaultHours = 1.0;
         double travelCharge = Math.max(0, best.getDistanceKm() - freeRadiusKm) * ratePerKm;
         travelCharge        = Math.round(travelCharge * 100.0) / 100.0;
@@ -299,7 +299,7 @@ public class DispatchServiceImpl implements DispatchService {
         sr.setEstimatedHours(defaultHours);
         sr.setApplianceCharge(0.0);
         sr.setTotalAmount(total);
-        sr.setQuoteNote("Auto-assigned by system. Technician will assess and update quote on arrival.");
+        sr.setQuoteNote("Auto-assigned the best technician by system. Technician will assess and update quote on arrival.");
         sr.setQuotedAt(LocalDateTime.now());
         sr.setBroadcastAttempts(sr.getBroadcastAttempts() + 1);
         requestRepo.save(sr);
