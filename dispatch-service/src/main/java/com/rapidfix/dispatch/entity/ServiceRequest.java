@@ -54,6 +54,7 @@ public class ServiceRequest {
     private LocalDateTime completedAt;
     private String technicianPhone;
 
+
     @CreationTimestamp @Column(updatable = false) private LocalDateTime createdAt;
     @UpdateTimestamp private LocalDateTime updatedAt;
 }

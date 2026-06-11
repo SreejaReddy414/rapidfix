@@ -343,6 +343,22 @@ function QuoteBox({ request, onApprove, onReject, approveLoading, rejectLoading 
             </div>
         )}
 
+        <div style={{
+          padding: '10px 12px',
+          marginBottom: '14px',
+          borderRadius: '10px',
+          background: 'rgba(245,158,11,0.08)',
+          border: '1px solid rgba(245,158,11,0.25)',
+          color: '#f59e0b',
+          fontSize: '12px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+        }}>
+          <Clock size={14} />
+          Please review and approve this quote within 5 minutes. The technician may withdraw or revise the quote if it is not approved in time.
+        </div>
+
         <div style={{ display: 'flex', gap: '10px' }}>
           <button onClick={onApprove} disabled={approveLoading} style={{
             flex: 2, padding: '10px', borderRadius: '10px', border: 'none',
