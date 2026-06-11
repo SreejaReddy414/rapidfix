@@ -64,11 +64,16 @@ public class TechnicianController {
     }
 
     @PatchMapping("/{id}/availability")
-    @PreAuthorize("hasRole('TECHNICIAN')")
+
     @Operation(summary = "Update availability status (TECHNICIAN only)")
     public ResponseEntity<TechnicianResponse> updateAvailability(
             @PathVariable Long id, @RequestParam AvailabilityStatus status) {
         return ResponseEntity.ok(service.updateAvailability(id, status));
+    }
+    @PatchMapping("/user/{userId}/availability")
+    public ResponseEntity<TechnicianResponse> updateAvailabilityByUserId(
+            @PathVariable Long userId, @RequestParam AvailabilityStatus status) {
+        return ResponseEntity.ok(service.updateAvailabilityByUserId(userId, status));
     }
 
     @PatchMapping("/{id}/location")

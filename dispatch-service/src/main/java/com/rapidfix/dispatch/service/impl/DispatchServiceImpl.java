@@ -130,7 +130,7 @@ public class DispatchServiceImpl implements DispatchService {
         sr.setStatus(RequestStatus.QUOTED);
         sr.setQuotedAt(LocalDateTime.now());
         sr.setTechnicianPhone(quote.getTechnicianPhone());
-
+        updateTechnicianAvailability(technicianId, "BUSY");
         logAction(requestId, technicianId, "QUOTED",
                 String.format("₹%.0f/hr × %.1fhr + ₹%.0f parts + ₹%.0f travel = ₹%.0f",
                         quote.getHourlyRate(), quote.getEstimatedHours(),
@@ -189,7 +189,7 @@ public class DispatchServiceImpl implements DispatchService {
         sr.setQuotedAt(null);
         sr.setApprovedAt(null);
         sr.setBroadcastedAt(LocalDateTime.now());
-
+        updateTechnicianAvailability(rejectedTechnicianId, "AVAILABLE");
         logAction(requestId, rejectedTechnicianId, "QUOTE_REJECTED", "User rejected quote");
         log.info("Quote rejected for request {}. Back to PENDING.", requestId);
         return mapper.toResponse(requestRepo.save(sr));
@@ -350,13 +350,13 @@ public class DispatchServiceImpl implements DispatchService {
         return mapper.toResponse(requestRepo.save(sr));
     }
 
-    private void updateTechnicianAvailability(Long technicianId, String status) {
+    private void updateTechnicianAvailability(Long userId, String status) {
         try {
             technicianWebClient.patch()
-                    .uri("/api/technicians/{id}/availability?status={status}", technicianId, status)
+                    .uri("/api/technicians/user/{userId}/availability?status={status}", userId, status)
                     .retrieve().toBodilessEntity().block();
         } catch (Exception e) {
-            log.warn("Failed to update technician {} to {}: {}", technicianId, status, e.getMessage());
+            log.warn("Failed to update technician {} to {}: {}", userId, status, e.getMessage());
         }
     }
 
@@ -383,5 +383,35 @@ public class DispatchServiceImpl implements DispatchService {
                 .totalPages(page.getTotalPages())
                 .last(page.isLast())
                 .build();
+    }
+    @Override @Transactional
+    public ServiceRequestResponse withdrawQuote(Long requestId, Long technicianId) {
+        log.info("Technician {} withdrawing quote for request {}", technicianId, requestId);
+        ServiceRequest sr = findById(requestId);
+
+        if (sr.getStatus() != RequestStatus.QUOTED)
+            throw new InvalidStateException("Quote already acted upon");
+
+        if (!sr.getTechnicianId().equals(technicianId))
+            throw new InvalidStateException("This is not your quote");
+
+        sr.setStatus(RequestStatus.PENDING);
+        sr.setTechnicianId(null);
+        sr.setTechnicianName(null);
+        sr.setHourlyRate(null);
+        sr.setEstimatedHours(null);
+        sr.setApplianceCharge(null);
+        sr.setTravelCharge(null);
+        sr.setTotalAmount(null);
+        sr.setQuoteNote(null);
+        sr.setQuotedAt(null);
+        sr.setTechnicianPhone(null);
+        sr.setBroadcastedAt(LocalDateTime.now()); // ← makes it visible to others again
+
+        updateTechnicianAvailability(technicianId, "AVAILABLE");
+        logAction(requestId, technicianId, "QUOTE_WITHDRAWN", "Technician withdrew quote after timeout");
+
+        log.info("Quote withdrawn for request {}. Back to PENDING.", requestId);
+        return mapper.toResponse(requestRepo.save(sr));
     }
 }

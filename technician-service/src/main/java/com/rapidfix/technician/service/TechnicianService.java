@@ -11,6 +11,7 @@ public interface TechnicianService {
     PagedResponse<TechnicianResponse> getAllTechnicians(Pageable pageable);
     TechnicianResponse updateAvailability(Long id, AvailabilityStatus status);
     TechnicianResponse updateLocation(Long id, LocationUpdateRequest request);
+    TechnicianResponse updateAvailabilityByUserId(Long userId, AvailabilityStatus status);
     TechnicianResponse updateRating(Long id, RatingRequest request);
     TechnicianResponse updateRatingByUserId(Long userId, RatingRequest request);  // ← ADD THIS LINE
     List<NearbyTechnicianResponse> findNearbyAvailable(Double lat, Double lon, Double radiusKm, ServiceType serviceType);

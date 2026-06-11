@@ -12,7 +12,7 @@ public interface DispatchService {
     PagedResponse<ServiceRequestResponse> getRequestsByTechnician(Long technicianId, Pageable pageable);
     PagedResponse<ServiceRequestResponse> getRequestsByStatus(RequestStatus status, Pageable pageable);
     PagedResponse<ServiceRequestResponse> getAvailableRequestsByServiceType(ServiceType serviceType, Pageable pageable);
-
+    ServiceRequestResponse withdrawQuote(Long requestId, Long technicianId);
     ServiceRequestResponse submitQuote(Long requestId, QuoteRequest quote, Long technicianId, String technicianName);
     ServiceRequestResponse approveQuote(Long requestId);
     ServiceRequestResponse rejectQuote(Long requestId);

@@ -129,6 +129,13 @@ public class TechnicianServiceImpl implements TechnicianService {
         repo.deleteById(id);
     }
 
+    public TechnicianResponse updateAvailabilityByUserId(Long userId, AvailabilityStatus status) {
+        Technician tech = repo.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Technician not found for userId: " + userId));
+        tech.setAvailabilityStatus(status);
+        return mapper.toResponse(repo.save(tech));
+    }
+
     private Technician findById(Long id) {
         return repo.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(

@@ -144,6 +144,13 @@ public class DispatchController {
         return ResponseEntity.ok(dispatchService.cancelRequest(id));
     }
 
+    @PatchMapping("/{id}/withdraw-quote")
+    public ResponseEntity<ServiceRequestResponse> withdrawQuote(
+            @PathVariable Long id,
+            @RequestParam Long technicianId) {
+        return ResponseEntity.ok(dispatchService.withdrawQuote(id, technicianId));
+    }
+
     private String extractToken(HttpServletRequest request) {
         String header = request.getHeader("Authorization");
         if (StringUtils.hasText(header) && header.startsWith("Bearer "))

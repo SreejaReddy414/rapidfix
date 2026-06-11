@@ -7,7 +7,7 @@ import toast from 'react-hot-toast';
 import JobMap from '../components/JobMap';
 import { useNavigate } from 'react-router-dom';
 import {
-  CheckCircle, PlayCircle, MapPin, Star,
+  CheckCircle, PlayCircle, MapPin, Star, XCircle,
   RefreshCw, ToggleLeft, ToggleRight, AlertCircle,
   Clock, FileText, Send, Navigation, ChevronLeft, ChevronRight,
   Briefcase, TrendingUp, Zap, Activity, Wrench, Search,
@@ -682,15 +682,58 @@ function JobCard({ job, mode, onRefresh, techProfile }) {
             {/* My jobs actions */}
             {mode === 'mine' && (
                 <>
-                  {job.status === 'QUOTED' && (
-                      <div style={{
-                        padding: '10px 14px', borderRadius: '10px',
-                        background: 'rgba(167,139,250,0.08)', border: '1px solid rgba(167,139,250,0.25)',
-                        fontSize: '13px', color: '#a78bfa', textAlign: 'center', fontWeight: 500,
-                      }}>
-                        ⏳ Waiting for customer to approve your quote
-                      </div>
-                  )}
+                  {job.status === 'QUOTED' && (() => {
+                    const quotedAt   = job.quotedAt ? new Date(job.quotedAt) : null;
+                    const minutesSince = quotedAt
+                        ? Math.floor((new Date() - quotedAt) / 60000)
+                        : 0;
+                    const canWithdraw = minutesSince >= 5;
+                    const minsLeft    = Math.max(0, 5 - minutesSince);
+
+                    return (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+
+                          {/* Waiting message */}
+                          <div style={{
+                            padding: '10px 14px', borderRadius: '10px',
+                            background: 'rgba(167,139,250,0.08)',
+                            border: '1px solid rgba(167,139,250,0.25)',
+                            fontSize: '13px', color: '#a78bfa',
+                            textAlign: 'center', fontWeight: 500,
+                          }}>
+                            ⏳ Waiting for customer to approve your quote
+                          </div>
+
+                          {/* Withdraw button */}
+                          <button
+                              onClick={() => action(
+                                  (id) => dispatchAPI.withdrawQuote(id, techProfile?.userId),
+                                  'withdraw',
+                                  'Quote withdrawn. You can now browse other jobs.'
+                              )}
+                              disabled={!canWithdraw || loading === 'withdraw'}
+                              title={!canWithdraw ? `Withdraw unlocks in ${minsLeft} min` : 'Withdraw your quote'}
+                              style={{
+                                width: '100%', padding: '10px', borderRadius: '12px',
+                                border: `1px solid ${canWithdraw ? 'rgba(231,76,60,0.3)' : 'var(--border)'}`,
+                                background: canWithdraw ? 'rgba(231,76,60,0.06)' : 'var(--bg3)',
+                                color: canWithdraw ? '#e74c3c' : 'var(--text3)',
+                                cursor: (!canWithdraw || loading === 'withdraw') ? 'not-allowed' : 'pointer',
+                                fontSize: '13px', fontWeight: 600, fontFamily: 'var(--font)',
+                                opacity: loading === 'withdraw' ? 0.7 : 1,
+                                display: 'flex', alignItems: 'center',
+                                justifyContent: 'center', gap: '6px',
+                                transition: 'all 0.2s ease',
+                              }}>
+                            <XCircle size={13} />
+                            {canWithdraw
+                                ? 'Withdraw Quote'
+                                : `Withdraw unlocks in ${minsLeft} min`}
+                          </button>
+
+                        </div>
+                    );
+                  })()}
                   {job.status === 'APPROVED' && (
                       <button onClick={() => action(dispatchAPI.markInProgress, 'progress', 'Job started! You are on site.')}
                               disabled={loading === 'progress'} style={{
@@ -914,7 +957,7 @@ function TechnicianSetup({ onComplete }) {
 
 // ─── AVAILABILITY TOGGLE ──────────────────────────────────────
 function AvailabilityToggle({ status, loading, onToggle }) {
-  const isOnline = status === 'AVAILABLE';
+  const isOnline = status === 'AVAILABLE' || status === 'BUSY' ;
   return (
       <button onClick={onToggle} disabled={loading} style={{
         display: 'inline-flex', alignItems: 'center', gap: '10px',
@@ -1006,7 +1049,7 @@ export function TechnicianDashboard() {
 
   const activeJobs  = jobs.filter(j => ['QUOTED','APPROVED','IN_PROGRESS'].includes(j.status));
   const availStatus = profile?.availabilityStatus;
-  const isOnline    = availStatus === 'AVAILABLE';
+  const isOnline    = availStatus === 'AVAILABLE' || availStatus === 'BUSY';
 
   return (
       <PageLayout>
@@ -1157,6 +1200,17 @@ export function BrowseJobsPage() {
     }).catch(() => {});
   }, [user.id]);
 
+  // Poll profile every 10 seconds — catches BUSY status set by submitQuote
+  useEffect(() => {
+    const iv = setInterval(async () => {
+      try {
+        const res = await techAPI.getByUserId(user.id);
+        setProfile(res.data);
+      } catch (e) {}
+    }, 10000);
+    return () => clearInterval(iv);
+  }, [user.id]);
+
   const searchForType = async (type, profileData) => {
     const tech = profileData || profile;
     setActiveTab(type);
@@ -1171,6 +1225,11 @@ export function BrowseJobsPage() {
           })
           : all;
       setJobs(filtered);
+
+      // Re-fetch profile after loading jobs — catches BUSY if they just quoted
+      const freshProfile = await techAPI.getByUserId(user.id);
+      setProfile(freshProfile.data);
+
     } catch (e) { toast.error('Failed to load jobs'); }
     finally { setLoading(false); }
   };

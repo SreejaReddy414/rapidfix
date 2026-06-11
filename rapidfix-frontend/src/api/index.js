@@ -51,6 +51,7 @@ export const dispatchAPI = {
   approveQuote:   (id)       => API.post(`/api/requests/${id}/approve-quote`),
   rejectQuote:    (id)       => API.post(`/api/requests/${id}/reject-quote`),
   markAsRated:    (id)       => API.patch(`/api/requests/${id}/mark-rated`),
+  withdrawQuote:  (id, technicianId) => API.patch(`/api/requests/${id}/withdraw-quote?technicianId=${technicianId}`), 
   markInProgress: (id)       => API.patch(`/api/requests/${id}/in-progress`),
   complete:       (id, data) => API.patch(`/api/requests/${id}/complete`, data),
   cancel:         (id)       => API.patch(`/api/requests/${id}/cancel`),
