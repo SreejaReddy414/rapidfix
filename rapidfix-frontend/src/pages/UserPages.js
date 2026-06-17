@@ -5,13 +5,35 @@ import { dispatchAPI, techAPI } from '../api';
 import { Button, Badge, LoadingScreen, ServiceIcon, Divider, Textarea, Input, Select } from '../components/UI';
 import Navbar from '../components/Navbar';
 import toast from 'react-hot-toast';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap, Polyline } from 'react-leaflet';
 import L from 'leaflet';
 import {
   Plus, MapPin, XCircle, RefreshCw, CheckCircle, Star,
   Clock, FileText, ChevronLeft, ChevronRight, Wrench,
   TrendingUp, AlertCircle, Activity, Navigation2
 } from 'lucide-react';
+import ChatBox from '../components/ChatBox';
+
+// ─── LEAFLET Z-INDEX FIX ──────────────────────────────────────
+if (typeof document !== 'undefined') {
+  const STYLE_ID = '__rapidfix-leaflet-zfix__';
+  if (!document.getElementById(STYLE_ID)) {
+    const style = document.createElement('style');
+    style.id = STYLE_ID;
+    style.textContent = `
+      .leaflet-pane          { z-index: 40 !important; }
+      .leaflet-tile-pane     { z-index: 20 !important; }
+      .leaflet-overlay-pane  { z-index: 30 !important; }
+      .leaflet-shadow-pane   { z-index: 35 !important; }
+      .leaflet-marker-pane   { z-index: 40 !important; }
+      .leaflet-tooltip-pane  { z-index: 45 !important; }
+      .leaflet-popup-pane    { z-index: 50 !important; }
+      .leaflet-top,
+      .leaflet-bottom        { z-index: 55 !important; }
+    `;
+    document.head.appendChild(style);
+  }
+}
 
 const SERVICE_TYPES = ['ELECTRICIAN','PLUMBER','AC_REPAIR','CARPENTER','PAINTER','CLEANER','APPLIANCE_REPAIR','PEST_CONTROL'];
 const PAGE_SIZE = 5;
@@ -84,7 +106,6 @@ function StatCard({ label, value, color, icon, accent }) {
            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = `0 12px 32px ${color}20`; }}
            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
       >
-        {/* glow blob */}
         <div style={{
           position: 'absolute', top: -20, right: -20,
           width: 80, height: 80, borderRadius: '50%',
@@ -173,7 +194,7 @@ function ReviewModal({ request, onClose, onDone }) {
 
   return (
       <div style={{
-        position: 'fixed', inset: 0, zIndex: 200,
+        position: 'fixed', inset: 0, zIndex: 9999,
         background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px',
       }} onClick={onClose}>
@@ -443,8 +464,9 @@ function FitBoundsLive({ pos1, pos2 }) {
   return null;
 }
 
-function LiveTrackingMap({ userLat, userLon, technicianId }) {
+function LiveTrackingMap({ userLat, userLon, technicianId, onDistanceUpdate }) {
   const [techLocation, setTechLocation] = useState(null);
+  const [routePoints, setRoutePoints] = useState([]);
 
   useEffect(() => {
     if (!technicianId) return;
@@ -461,6 +483,35 @@ function LiveTrackingMap({ userLat, userLon, technicianId }) {
 
   const customerPos = userLat && userLon ? [userLat, userLon] : null;
   const techPos = techLocation ? [techLocation.lat, techLocation.lon] : null;
+
+  useEffect(() => {
+    if (!customerPos || !techPos) {
+      setRoutePoints([]);
+      if (onDistanceUpdate) onDistanceUpdate(null);
+      return;
+    }
+    const fetchRoute = async () => {
+      try {
+        const url = `https://router.project-osrm.org/route/v1/driving/${customerPos[1]},${customerPos[0]};${techPos[1]},${techPos[0]}?overview=full&geometries=geojson`;
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.routes && data.routes.length > 0) {
+          const coords = data.routes[0].geometry.coordinates.map(pt => [pt[1], pt[0]]);
+          setRoutePoints(coords);
+          if (onDistanceUpdate) {
+            const distance = data.routes[0].distance / 1000;
+            onDistanceUpdate(distance);
+          }
+        } else {
+          setRoutePoints([customerPos, techPos]);
+        }
+      } catch (e) {
+        setRoutePoints([customerPos, techPos]);
+      }
+    };
+    fetchRoute();
+  }, [userLat, userLon, techLocation]);
+
   if (!customerPos) return null;
 
   return (
@@ -478,23 +529,50 @@ function LiveTrackingMap({ userLat, userLon, technicianId }) {
           {techPos ? '● LIVE' : '⏳ Locating...'}
         </span>
         </div>
-        <MapContainer center={customerPos} zoom={13} style={{ height: '240px', width: '100%' }} scrollWheelZoom={false}>
-          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; OpenStreetMap contributors' />
-          <FitBoundsLive pos1={customerPos} pos2={techPos} />
-          <Marker position={customerPos} icon={customerIcon}><Popup>📍 Your Location</Popup></Marker>
-          {techPos && <Marker position={techPos} icon={technicianIcon}><Popup>🔧 Technician (live)</Popup></Marker>}
-        </MapContainer>
+        <div style={{ isolation: 'isolate', position: 'relative' }}>
+          <MapContainer
+              center={customerPos}
+              zoom={13}
+              style={{ height: '240px', width: '100%' }}
+              scrollWheelZoom={false}
+          >
+            <TileLayer
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                attribution='&copy; OpenStreetMap contributors'
+            />
+            <FitBoundsLive pos1={customerPos} pos2={techPos} />
+            <Marker position={customerPos} icon={customerIcon}>
+              <Popup>📍 Your Location</Popup>
+            </Marker>
+            {techPos && (
+                <>
+                  {routePoints.length > 0 && (
+                      <Polyline
+                          positions={routePoints}
+                          color="#3b82f6"
+                          weight={4}
+                          opacity={0.8}
+                      />
+                  )}
+                  <Marker position={techPos} icon={technicianIcon}>
+                    <Popup>🔧 Technician (live)</Popup>
+                  </Marker>
+                </>
+            )}
+          </MapContainer>
+        </div>
       </div>
   );
 }
 
 // ─── REQUEST CARD ─────────────────────────────────────────────
-function RequestCard({ request, onRefresh }) {
+function RequestCard({ request, onRefresh, onChatActiveChange }) {
   const [cancelLoading,  setCancelLoading]  = useState(false);
   const [approveLoading, setApproveLoading] = useState(false);
   const [rejectLoading,  setRejectLoading]  = useState(false);
   const [showReview,     setShowReview]     = useState(false);
-
+  const [liveDistance,   setLiveDistance]   = useState(null);
+  const { user } = useAuth();
   const meta = SERVICE_META[request.serviceType] || { icon: '🔨', color: 'var(--accent)', bg: 'var(--accentbg)' };
 
   const cancel = async () => {
@@ -586,13 +664,41 @@ function RequestCard({ request, onRefresh }) {
             )}
 
             {/* ETA */}
-            {['APPROVED', 'IN_PROGRESS'].includes(request.status) && request.estimatedArrivalTime && (
-                <ETABox estimatedArrivalTime={request.estimatedArrivalTime} distanceKm={request.distanceKm} />
+            {request.status === 'APPROVED' && request.estimatedArrivalTime && (
+                <ETABox estimatedArrivalTime={request.estimatedArrivalTime} distanceKm={liveDistance || request.distanceKm} />
+            )}
+
+            {request.status === 'IN_PROGRESS' && (
+                <div style={{
+                  padding: '14px 16px', borderRadius: '14px',
+                  background: 'linear-gradient(135deg, rgba(16,185,129,0.1) 0%, rgba(16,185,129,0.05) 100%)',
+                  border: '1px solid rgba(16,185,129,0.25)',
+                  display: 'flex', alignItems: 'center', gap: '12px',
+                }}>
+                  <div style={{
+                    width: 38, height: 38, borderRadius: '12px',
+                    background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px',
+                  }}>👋</div>
+                  <div>
+                    <div style={{ fontSize: '12px', color: 'var(--text3)', marginBottom: '2px' }}>
+                      Status
+                    </div>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#10b981' }}>
+                      Technician Arrived
+                    </div>
+                  </div>
+                </div>
             )}
 
             {/* Live map */}
             {['APPROVED', 'IN_PROGRESS'].includes(request.status) && request.userLatitude && request.technicianId && (
-                <LiveTrackingMap userLat={request.userLatitude} userLon={request.userLongitude} technicianId={request.technicianId} />
+                <LiveTrackingMap
+                    userLat={request.userLatitude}
+                    userLon={request.userLongitude}
+                    technicianId={request.technicianId}
+                    onDistanceUpdate={setLiveDistance}
+                />
             )}
 
             {/* Phone */}
@@ -606,6 +712,16 @@ function RequestCard({ request, onRefresh }) {
                     {request.technicianPhone}
                   </a>
                 </div>
+            )}
+
+            {/* Chat */}
+            {['APPROVED', 'IN_PROGRESS'].includes(request.status) && (
+                <ChatBox
+                    requestId={request.id}
+                    currentUser={{ id: user.id, name: user.name, role: 'USER' }}
+                    status={request.status}
+                    onChatActiveChange={onChatActiveChange}
+                />
             )}
 
             {/* Final amount */}
@@ -768,9 +884,10 @@ function AddressAutocomplete({ value, onChange, onLocationSelect }) {
 // ─── USER DASHBOARD ───────────────────────────────────────────
 export function UserDashboard() {
   const { user } = useAuth();
-  const [requests, setRequests] = useState([]);
-  const [loading,  setLoading]  = useState(true);
-  const [page,     setPage]     = useState(0);
+  const [requests,    setRequests]    = useState([]);
+  const [loading,     setLoading]     = useState(true);
+  const [page,        setPage]        = useState(0);
+  const [chatActive,  setChatActive]  = useState(false);
   const navigate = useNavigate();
 
   const load = async () => {
@@ -782,11 +899,16 @@ export function UserDashboard() {
     finally { setLoading(false); }
   };
 
+  // ─── Auto-refresh: paused while chat is open ─────────────────
   useEffect(() => {
     load();
+  }, []);
+
+  useEffect(() => {
+    if (chatActive) return; // don't set up interval while chatting
     const iv = setInterval(load, 15000);
     return () => clearInterval(iv);
-  }, []);
+  }, [chatActive]);
 
   const stats = {
     total:     requests.length,
@@ -827,7 +949,7 @@ export function UserDashboard() {
 
           {/* Stats */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px', marginBottom: '32px' }}>
-            <StatCard label="Total"     value={stats.total}     color="#f0f0f8" icon={<Activity size={16}/>} />
+            <StatCard label="Total"     value={stats.total}     color="var(--text)" icon={<Activity size={16}/>} />
             <StatCard label="Pending"   value={stats.pending}   color="#f59e0b" icon={<Clock size={16}/>} />
             <StatCard label="Quoted"    value={stats.quoted}    color="#a78bfa" icon={<FileText size={16}/>} accent={stats.quoted > 0} />
             <StatCard label="Active"    value={stats.active}    color="#3b82f6" icon={<Navigation2 size={16}/>} accent={stats.active > 0} />
@@ -895,7 +1017,14 @@ export function UserDashboard() {
                 return (
                     <>
                       <div style={{ display: 'grid', gap: '12px' }}>
-                        {paged.map(r => <RequestCard key={r.id} request={r} onRefresh={load} />)}
+                        {paged.map(r => (
+                            <RequestCard
+                                key={r.id}
+                                request={r}
+                                onRefresh={load}
+                                onChatActiveChange={setChatActive}
+                            />
+                        ))}
                       </div>
                       <Pagination currentPage={safePage} totalPages={totalPages} onPageChange={setPage} />
                     </>
@@ -1087,10 +1216,11 @@ export function NewRequestPage() {
 // ─── USER REQUESTS PAGE ───────────────────────────────────────
 export function UserRequestsPage() {
   const { user }  = useAuth();
-  const [requests, setRequests] = useState([]);
-  const [loading,  setLoading]  = useState(true);
-  const [filter,   setFilter]   = useState('ALL');
-  const [page,     setPage]     = useState(0);
+  const [requests,   setRequests]   = useState([]);
+  const [loading,    setLoading]    = useState(true);
+  const [filter,     setFilter]     = useState('ALL');
+  const [page,       setPage]       = useState(0);
+  const [chatActive, setChatActive] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -1103,11 +1233,17 @@ export function UserRequestsPage() {
 
   useEffect(() => { load(); }, []);
 
+  // ─── Auto-refresh: paused while chat is open ─────────────────
+  useEffect(() => {
+    if (chatActive) return;
+    const iv = setInterval(load, 15000);
+    return () => clearInterval(iv);
+  }, [chatActive]);
+
   const STATUS_FILTERS = ['ALL','PENDING','QUOTED','APPROVED','IN_PROGRESS','COMPLETED','CANCELLED'];
   const filtered = filter === 'ALL' ? requests : requests.filter(r => r.status === filter);
   const handleFilterChange = (f) => { setFilter(f); setPage(0); };
 
-  // Count per status for filter badges
   const counts = STATUS_FILTERS.reduce((acc, s) => {
     acc[s] = s === 'ALL' ? requests.length : requests.filter(r => r.status === s).length;
     return acc;
@@ -1192,7 +1328,14 @@ export function UserRequestsPage() {
                         Showing {safePage * PAGE_SIZE + 1}–{Math.min((safePage + 1) * PAGE_SIZE, filtered.length)} of {filtered.length}
                       </div>
                       <div style={{ display: 'grid', gap: '12px' }}>
-                        {paged.map(r => <RequestCard key={r.id} request={r} onRefresh={load} />)}
+                        {paged.map(r => (
+                            <RequestCard
+                                key={r.id}
+                                request={r}
+                                onRefresh={load}
+                                onChatActiveChange={setChatActive}
+                            />
+                        ))}
                       </div>
                       <Pagination currentPage={safePage} totalPages={totalPages} onPageChange={setPage} />
                     </>

@@ -12,6 +12,7 @@ import {
   Clock, FileText, Send, Navigation, ChevronLeft, ChevronRight,
   Briefcase, TrendingUp, Zap, Activity, Wrench, Search,
 } from 'lucide-react';
+import ChatBox from '../components/ChatBox';
 
 const SERVICE_TYPES = ['ELECTRICIAN','PLUMBER','AC_REPAIR','CARPENTER','PAINTER','CLEANER','APPLIANCE_REPAIR','PEST_CONTROL'];
 const PAGE_SIZE = 5;
@@ -156,6 +157,8 @@ function Pagination({ currentPage, totalPages, onPageChange }) {
 }
 
 // ─── QUOTE MODAL ─────────────────────────────────────────────
+// FIX: Added maxHeight + overflowY to inner card so the Submit button
+//      is always reachable on shorter screens without scrolling the page.
 function QuoteModal({ job, onClose, onDone }) {
   const [form, setForm] = useState({ hourlyRate: '', estimatedHours: '', applianceCharge: '0', quoteNote: '' });
   const [loading, setLoading] = useState(false);
@@ -195,12 +198,23 @@ function QuoteModal({ job, onClose, onDone }) {
 
   return (
       <div style={{
-        position: 'fixed', inset: 0, zIndex: 200,
+        position: 'fixed', inset: 0, zIndex: 9000,
         background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px',
+        overflowY: 'auto', WebkitOverflowScrolling: 'touch',
+        padding: '24px',
       }} onClick={onClose}>
+        {/* ─ KEY FIX: the overlay itself scrolls, instead of relying on
+              flex centering + an inner maxHeight/overflow. A flex-centered
+              child that's taller than the viewport overflows symmetrically
+              above and below — and that overflow isn't reachable, since
+              nothing was scrollable. That's what hid the Submit button
+              behind the mobile keyboard / on short screens (shrinking the
+              window "fixed" it only because it forced real overflow on the
+              inner card). Letting the overlay scroll, with the card just
+              centered horizontally, guarantees you can always scroll down
+              to the button. ─ */}
         <div style={{
-          width: '100%', maxWidth: '460px',
+          width: '100%', maxWidth: '460px', margin: '0 auto',
           background: 'var(--bg2)', borderRadius: '20px',
           border: '1px solid var(--border2)', padding: '32px',
           animation: 'fadeUp 0.3s ease',
@@ -318,6 +332,7 @@ function QuoteModal({ job, onClose, onDone }) {
 }
 
 // ─── COMPLETE MODAL ───────────────────────────────────────────
+// FIX: Same maxHeight + overflowY treatment as QuoteModal.
 function CompleteModal({ job, onClose, onDone }) {
   const [actualHours,     setActualHours]     = useState(job.estimatedHours || '');
   const [applianceCharge, setApplianceCharge] = useState('');
@@ -355,12 +370,16 @@ function CompleteModal({ job, onClose, onDone }) {
 
   return (
       <div style={{
-        position: 'fixed', inset: 0, zIndex: 200,
+        position: 'fixed', inset: 0, zIndex: 9000,
         background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px',
+        overflowY: 'auto', WebkitOverflowScrolling: 'touch',
+        padding: '24px',
       }} onClick={onClose}>
+        {/* ─ KEY FIX: same scrollable-overlay treatment as QuoteModal — see
+              that component's comment for why the inner maxHeight approach
+              wasn't enough. ─ */}
         <div style={{
-          width: '100%', maxWidth: '440px',
+          width: '100%', maxWidth: '440px', margin: '0 auto',
           background: 'var(--bg2)', borderRadius: '20px',
           border: '1px solid var(--border2)', padding: '32px',
           animation: 'fadeUp 0.3s ease',
@@ -498,6 +517,9 @@ function CompleteModal({ job, onClose, onDone }) {
 }
 
 // ─── JOB CARD ─────────────────────────────────────────────────
+// FIX: Removed `overflow: hidden` from the card wrapper — it was clipping
+//      the ChatBox fixed modal (cutting off the close button at the top).
+//      The accent bar's rounded corners are preserved via borderRadius alone.
 function JobCard({ job, mode, onRefresh, techProfile }) {
   const [loading,      setLoading]      = useState('');
   const [showQuote,    setShowQuote]    = useState(false);
@@ -525,8 +547,26 @@ function JobCard({ job, mode, onRefresh, techProfile }) {
     finally { setLoading(''); }
   };
 
-  // Distance badge for browse mode
-  const distBadge = mode === 'browse' && job.userLatitude && techProfile?.latitude
+  const [liveDistBadge, setLiveDistBadge] = useState(null);
+
+  useEffect(() => {
+    if (mode !== 'browse' || !job.userLatitude || !techProfile?.latitude) return;
+    const fetchLiveRoute = async () => {
+      try {
+        const url = `https://router.project-osrm.org/route/v1/driving/${techProfile.longitude},${techProfile.latitude};${job.userLongitude},${job.userLatitude}?overview=false`;
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
+          const d = data.routes[0].distance / 1000;
+          const eta = Math.round(data.routes[0].duration / 60);
+          setLiveDistBadge({ km: d.toFixed(1), eta });
+        }
+      } catch (e) {}
+    };
+    fetchLiveRoute();
+  }, [mode, job.userLatitude, techProfile?.latitude]);
+
+  const haversineDist = mode === 'browse' && job.userLatitude && techProfile?.latitude
       ? (() => {
         const d = haversine(techProfile.latitude, techProfile.longitude, job.userLatitude, job.userLongitude);
         const eta = Math.round((d / 30) * 60);
@@ -534,20 +574,35 @@ function JobCard({ job, mode, onRefresh, techProfile }) {
       })()
       : null;
 
+  const distBadge = liveDistBadge || haversineDist;
+
   const canShowMap = ['APPROVED', 'IN_PROGRESS'].includes(job.status) && job.userLatitude;
 
   return (
       <>
+        {/* ─ KEY FIX: no `transform` is set on this wrapper, even on hover.
+              A CSS transform on an element makes it the containing block for
+              any `position: fixed` descendant. ChatBox renders a fixed,
+              full-screen overlay when opened, and it lives inside this card
+              — with a transform here, that overlay got boxed into the
+              card's own (small) size instead of the viewport, which is why
+              its close button was unreachable/clipped. Hover feedback now
+              uses only border-color + box-shadow, no lift, so the
+              containing block stays the viewport. ─ */}
         <div style={{
           background: 'var(--bg2)', borderRadius: '16px',
-          border: '1px solid var(--border)', overflow: 'hidden',
+          border: '1px solid var(--border)',
           transition: 'all 0.2s ease',
         }}
-             onMouseEnter={e => { e.currentTarget.style.borderColor = meta.color + '40'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = `0 8px 32px ${meta.color}10`; }}
-             onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
+             onMouseEnter={e => { e.currentTarget.style.borderColor = meta.color + '40'; e.currentTarget.style.boxShadow = `0 8px 32px ${meta.color}10`; }}
+             onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.boxShadow = 'none'; }}
         >
-          {/* Accent bar */}
-          <div style={{ height: 3, background: `linear-gradient(90deg, ${meta.color}, ${meta.color}00)` }} />
+          {/* Accent bar — borderRadius on top corners only to match card */}
+          <div style={{
+            height: 3,
+            background: `linear-gradient(90deg, ${meta.color}, ${meta.color}00)`,
+            borderRadius: '16px 16px 0 0',
+          }} />
 
           <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
@@ -663,6 +718,15 @@ function JobCard({ job, mode, onRefresh, techProfile }) {
                 </div>
             )}
 
+            {/* Chat — visible to technician once quote is approved */}
+            {mode === 'mine' && ['APPROVED', 'IN_PROGRESS'].includes(job.status) && (
+                <ChatBox
+                    requestId={job.id}
+                    currentUser={{ id: techProfile?.userId, name: techProfile?.name || 'Technician', role: 'TECHNICIAN' }}
+                    status={job.status}
+                />
+            )}
+
             {/* Browse mode action */}
             {mode === 'browse' && job.status === 'PENDING' && (
                 <button onClick={() => setShowQuote(true)} style={{
@@ -692,8 +756,6 @@ function JobCard({ job, mode, onRefresh, techProfile }) {
 
                     return (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-
-                          {/* Waiting message */}
                           <div style={{
                             padding: '10px 14px', borderRadius: '10px',
                             background: 'rgba(167,139,250,0.08)',
@@ -703,8 +765,6 @@ function JobCard({ job, mode, onRefresh, techProfile }) {
                           }}>
                             ⏳ Waiting for customer to approve your quote
                           </div>
-
-                          {/* Withdraw button */}
                           <button
                               onClick={() => action(
                                   (id) => dispatchAPI.withdrawQuote(id, techProfile?.userId),
@@ -730,7 +790,6 @@ function JobCard({ job, mode, onRefresh, techProfile }) {
                                 ? 'Withdraw Quote'
                                 : `Withdraw unlocks in ${minsLeft} min`}
                           </button>
-
                         </div>
                     );
                   })()}
@@ -765,9 +824,11 @@ function JobCard({ job, mode, onRefresh, techProfile }) {
 
         {/* Modals */}
         {showQuote && (() => {
-          const distKm = techProfile?.latitude
-              ? haversine(techProfile.latitude, techProfile.longitude, job.userLatitude, job.userLongitude)
-              : 0;
+          const distKm = liveDistBadge?.km
+              ? parseFloat(liveDistBadge.km)
+              : (techProfile?.latitude
+                  ? haversine(techProfile.latitude, techProfile.longitude, job.userLatitude, job.userLongitude)
+                  : 0);
           return (
               <QuoteModal
                   job={{ ...job, distanceKm: distKm, technicianPhone: techProfile?.phone || '' }}
@@ -1065,7 +1126,6 @@ export function TechnicianDashboard() {
                 {profile?.serviceTypes?.map(s => s.replace(/_/g,' ')).join(' · ')}
               </p>
             </div>
-            {/* Availability badge */}
             <div style={{
               display: 'inline-flex', alignItems: 'center', gap: '7px',
               padding: '6px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: 600,
@@ -1099,7 +1159,7 @@ export function TechnicianDashboard() {
             />
           </div>
 
-          {/* Quick actions card */}
+          {/* Quick actions */}
           <div style={{
             background: 'var(--bg2)', borderRadius: '16px',
             border: '1px solid var(--border)', padding: '20px',
@@ -1200,7 +1260,6 @@ export function BrowseJobsPage() {
     }).catch(() => {});
   }, [user.id]);
 
-  // Poll profile every 10 seconds — catches BUSY status set by submitQuote
   useEffect(() => {
     const iv = setInterval(async () => {
       try {
@@ -1225,16 +1284,12 @@ export function BrowseJobsPage() {
           })
           : all;
       setJobs(filtered);
-
-      // Re-fetch profile after loading jobs — catches BUSY if they just quoted
       const freshProfile = await techAPI.getByUserId(user.id);
       setProfile(freshProfile.data);
-
     } catch (e) { toast.error('Failed to load jobs'); }
     finally { setLoading(false); }
   };
 
-  // Blocked states
   if (profile?.availabilityStatus === 'BUSY') {
     return (
         <PageLayout>
@@ -1289,7 +1344,6 @@ export function BrowseJobsPage() {
       <PageLayout>
         <div style={{ animation: 'fadeUp 0.4s ease' }}>
 
-          {/* Header */}
           <div style={{ marginBottom: '28px' }}>
             <h1 style={{ fontFamily: 'var(--font-head)', fontSize: '28px', fontWeight: 800, letterSpacing: '-0.5px' }}>
               Browse Jobs
@@ -1299,7 +1353,6 @@ export function BrowseJobsPage() {
             </p>
           </div>
 
-          {/* Service type tabs */}
           {profile?.serviceTypes?.length > 0 && (
               <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', flexWrap: 'wrap' }}>
                 {[...profile.serviceTypes].map(s => {
@@ -1404,7 +1457,6 @@ export function MyJobsPage() {
       <PageLayout>
         <div style={{ animation: 'fadeUp 0.4s ease' }}>
 
-          {/* Header */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px' }}>
             <div>
               <h1 style={{ fontFamily: 'var(--font-head)', fontSize: '28px', fontWeight: 800, letterSpacing: '-0.5px' }}>
@@ -1428,7 +1480,6 @@ export function MyJobsPage() {
             </button>
           </div>
 
-          {/* Filter tabs with count badges */}
           <div style={{ display: 'flex', gap: '6px', marginBottom: '24px', flexWrap: 'wrap' }}>
             {STATUS_FILTERS.map(s => {
               const active = filter === s;

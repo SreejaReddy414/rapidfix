@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DispatchController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">dispatch-service</a> &gt; <a href="index.source.html" class="el_package">com.rapidfix.dispatch.controller</a> &gt; <span class="el_source">DispatchController.java</span></div><h1>DispatchController.java</h1><pre class="source lang-java linenums">package com.rapidfix.dispatch.controller;
+
+import com.rapidfix.dispatch.dto.*;
+import com.rapidfix.dispatch.entity.RequestStatus;
+import com.rapidfix.dispatch.entity.ServiceType;
+import com.rapidfix.dispatch.security.JwtUtil;
+import com.rapidfix.dispatch.service.DispatchService;
+import io.swagger.v3.oas.annotations.*;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.*;
+import org.springframework.http.*;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.util.StringUtils;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping(&quot;/api/requests&quot;)
+<span class="fc" id="L22">@RequiredArgsConstructor</span>
+@Tag(name = &quot;Dispatch&quot;, description = &quot;Service request lifecycle management&quot;)
+@SecurityRequirement(name = &quot;Bearer&quot;)
+public class DispatchController {
+
+    private final DispatchService dispatchService;
+    private final JwtUtil jwtUtil;
+
+    @PostMapping
+    @PreAuthorize(&quot;hasRole('USER')&quot;)
+    @Operation(summary = &quot;Create a service request (USER only)&quot;)
+    public ResponseEntity&lt;ServiceRequestResponse&gt; create(
+            @Valid @RequestBody ServiceRequestCreate request,
+            HttpServletRequest httpRequest) {
+<span class="fc" id="L36">        String token = extractToken(httpRequest);</span>
+<span class="fc" id="L37">        return ResponseEntity.status(HttpStatus.CREATED)</span>
+<span class="fc" id="L38">                .body(dispatchService.createRequest(request,</span>
+<span class="fc" id="L39">                        jwtUtil.extractUserId(token), jwtUtil.extractEmail(token)));</span>
+    }
+
+    @GetMapping(&quot;/{id}&quot;)
+    @Operation(summary = &quot;Get service request by ID&quot;)
+    public ResponseEntity&lt;ServiceRequestResponse&gt; getById(@PathVariable Long id) {
+<span class="fc" id="L45">        return ResponseEntity.ok(dispatchService.getRequestById(id));</span>
+    }
+
+    @GetMapping(&quot;/user/{userId}&quot;)
+    @Operation(summary = &quot;Get all requests by user (paginated)&quot;)
+    public ResponseEntity&lt;PagedResponse&lt;ServiceRequestResponse&gt;&gt; getByUser(
+            @PathVariable Long userId,
+            @RequestParam(defaultValue = &quot;0&quot;) int page,
+            @RequestParam(defaultValue = &quot;10&quot;) int size) {
+<span class="fc" id="L54">        return ResponseEntity.ok(dispatchService.getRequestsByUser(userId,</span>
+<span class="fc" id="L55">                PageRequest.of(page, size, Sort.by(&quot;createdAt&quot;).descending())));</span>
+    }
+
+    @GetMapping(&quot;/technician/{technicianId}&quot;)
+    @Operation(summary = &quot;Get all jobs for a technician (paginated)&quot;)
+    public ResponseEntity&lt;PagedResponse&lt;ServiceRequestResponse&gt;&gt; getByTechnician(
+            @PathVariable Long technicianId,
+            @RequestParam(defaultValue = &quot;0&quot;) int page,
+            @RequestParam(defaultValue = &quot;10&quot;) int size) {
+<span class="fc" id="L64">        return ResponseEntity.ok(dispatchService.getRequestsByTechnician(technicianId,</span>
+<span class="fc" id="L65">                PageRequest.of(page, size, Sort.by(&quot;createdAt&quot;).descending())));</span>
+    }
+
+    @GetMapping(&quot;/status/{status}&quot;)
+    @PreAuthorize(&quot;hasRole('ADMIN')&quot;)
+    @Operation(summary = &quot;Get all requests by status — ADMIN only&quot;)
+    public ResponseEntity&lt;PagedResponse&lt;ServiceRequestResponse&gt;&gt; getByStatus(
+            @PathVariable RequestStatus status,
+            @RequestParam(defaultValue = &quot;0&quot;) int page,
+            @RequestParam(defaultValue = &quot;10&quot;) int size) {
+<span class="nc" id="L75">        return ResponseEntity.ok(dispatchService.getRequestsByStatus(status,</span>
+<span class="nc" id="L76">                PageRequest.of(page, size, Sort.by(&quot;createdAt&quot;).descending())));</span>
+    }
+
+    @PatchMapping(&quot;/{id}/mark-rated&quot;)
+    @PreAuthorize(&quot;hasRole('USER')&quot;)
+    @Operation(summary = &quot;Mark a completed request as rated&quot;)
+    public ResponseEntity&lt;ServiceRequestResponse&gt; markAsRated(@PathVariable Long id) {
+<span class="fc" id="L83">        return ResponseEntity.ok(dispatchService.markAsRated(id));</span>
+    }
+
+    @GetMapping(&quot;/available&quot;)
+    @PreAuthorize(&quot;hasRole('TECHNICIAN')&quot;)
+    @Operation(summary = &quot;Browse all PENDING requests by service type (TECHNICIAN only)&quot;)
+    public ResponseEntity&lt;PagedResponse&lt;ServiceRequestResponse&gt;&gt; getAvailableRequests(
+            @RequestParam ServiceType serviceType,
+            @RequestParam(defaultValue = &quot;0&quot;) int page,
+            @RequestParam(defaultValue = &quot;10&quot;) int size) {
+<span class="fc" id="L93">        return ResponseEntity.ok(dispatchService.getAvailableRequestsByServiceType(</span>
+<span class="fc" id="L94">                serviceType, PageRequest.of(page, size, Sort.by(&quot;createdAt&quot;).descending())));</span>
+    }
+
+    @PostMapping(&quot;/{id}/quote&quot;)
+    @PreAuthorize(&quot;hasRole('TECHNICIAN')&quot;)
+    @Operation(summary = &quot;Submit a price quote before visiting (TECHNICIAN only)&quot;,
+            description = &quot;hourlyRate × estimatedHours + applianceCharge = total. User must approve before you visit.&quot;)
+    public ResponseEntity&lt;ServiceRequestResponse&gt; submitQuote(
+            @PathVariable Long id,
+            @Valid @RequestBody QuoteRequest quoteRequest,
+            HttpServletRequest httpRequest) {
+<span class="fc" id="L105">        String token = extractToken(httpRequest);</span>
+<span class="fc" id="L106">        return ResponseEntity.ok(dispatchService.submitQuote(id, quoteRequest,</span>
+<span class="fc" id="L107">                jwtUtil.extractUserId(token), jwtUtil.extractName(token)));</span>
+    }
+
+    @PostMapping(&quot;/{id}/approve-quote&quot;)
+    @PreAuthorize(&quot;hasRole('USER')&quot;)
+    @Operation(summary = &quot;Approve the technician's quote — technician will now visit (USER only)&quot;)
+    public ResponseEntity&lt;ServiceRequestResponse&gt; approveQuote(@PathVariable Long id) {
+<span class="fc" id="L114">        return ResponseEntity.ok(dispatchService.approveQuote(id));</span>
+    }
+
+    @PostMapping(&quot;/{id}/reject-quote&quot;)
+    @PreAuthorize(&quot;hasRole('USER')&quot;)
+    @Operation(summary = &quot;Reject the quote — request returns to PENDING for other technicians (USER only)&quot;)
+    public ResponseEntity&lt;ServiceRequestResponse&gt; rejectQuote(@PathVariable Long id) {
+<span class="fc" id="L121">        return ResponseEntity.ok(dispatchService.rejectQuote(id));</span>
+    }
+
+    @PatchMapping(&quot;/{id}/in-progress&quot;)
+    @PreAuthorize(&quot;hasRole('TECHNICIAN')&quot;)
+    @Operation(summary = &quot;Mark arrived on site and working (TECHNICIAN only — only after quote approved)&quot;)
+    public ResponseEntity&lt;ServiceRequestResponse&gt; markInProgress(@PathVariable Long id) {
+<span class="fc" id="L128">        return ResponseEntity.ok(dispatchService.markInProgress(id));</span>
+    }
+
+    @PatchMapping(&quot;/{id}/complete&quot;)
+    @PreAuthorize(&quot;hasRole('TECHNICIAN')&quot;)
+    @Operation(summary = &quot;Complete the job with actual hours worked (TECHNICIAN only)&quot;)
+    public ResponseEntity&lt;ServiceRequestResponse&gt; complete(
+            @PathVariable Long id,
+            @Valid @RequestBody CompletionRequest completion) {
+<span class="fc" id="L137">        return ResponseEntity.ok(dispatchService.completeRequest(id, completion));</span>
+    }
+
+    @PatchMapping(&quot;/{id}/cancel&quot;)
+    @PreAuthorize(&quot;hasAnyRole('USER', 'ADMIN')&quot;)
+    @Operation(summary = &quot;Cancel a service request (USER or ADMIN)&quot;)
+    public ResponseEntity&lt;ServiceRequestResponse&gt; cancel(@PathVariable Long id) {
+<span class="fc" id="L144">        return ResponseEntity.ok(dispatchService.cancelRequest(id));</span>
+    }
+
+    @PatchMapping(&quot;/{id}/withdraw-quote&quot;)
+    public ResponseEntity&lt;ServiceRequestResponse&gt; withdrawQuote(
+            @PathVariable Long id,
+            @RequestParam Long technicianId) {
+<span class="fc" id="L151">        return ResponseEntity.ok(dispatchService.withdrawQuote(id, technicianId));</span>
+    }
+
+    private String extractToken(HttpServletRequest request) {
+<span class="fc" id="L155">        String header = request.getHeader(&quot;Authorization&quot;);</span>
+<span class="pc bpc" id="L156" title="2 of 4 branches missed.">        if (StringUtils.hasText(header) &amp;&amp; header.startsWith(&quot;Bearer &quot;))</span>
+<span class="fc" id="L157">            return header.substring(7);</span>
+<span class="nc" id="L158">        throw new RuntimeException(&quot;Missing Authorization header&quot;);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CompletionRequest.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">dispatch-service</a> &gt; <a href="index.source.html" class="el_package">com.rapidfix.dispatch.dto</a> &gt; <span class="el_source">CompletionRequest.java</span></div><h1>CompletionRequest.java</h1><pre class="source lang-java linenums">package com.rapidfix.dispatch.dto;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.*;
+import lombok.*;
+
+<span class="pc bnc" id="L7" title="All 30 branches missed.">@Data @NoArgsConstructor @AllArgsConstructor @Builder</span>
+@Schema(description = &quot;Technician submits actual work details at completion&quot;)
+public class CompletionRequest {
+
+    @NotNull(message = &quot;Actual hours is required&quot;)
+    @DecimalMin(value = &quot;0.5&quot;, message = &quot;Minimum 0.5 hours&quot;)
+    @Schema(description = &quot;Actual hours worked&quot;, example = &quot;2.5&quot;)
+<span class="fc" id="L14">    private Double actualHours;</span>
+
+    @NotNull(message = &quot;Actual appliance charge is required — use 0 if no parts used&quot;)
+    @Min(value = 0, message = &quot;Cannot be negative&quot;)
+    @Schema(
+            description = &quot;Actual cost of parts/appliances used after work. &quot; +
+                    &quot;This is the REAL cost — may differ from the estimated amount in the quote.&quot;,
+            example = &quot;420.0&quot;
+    )
+<span class="fc" id="L23">    private Double actualApplianceCharge;</span>
+
+    @Size(max = 500)
+    @Schema(description = &quot;Summary of work done&quot;, example = &quot;Replaced capacitor and motor bearings&quot;)
+<span class="fc" id="L27">    private String completionNote;</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

@@ -74,3 +74,8 @@ spring:
               args:
                 redis-rate-limiter: "#{@redisRateLimiter}"
                 key-resolver: "#{@ipKeyResolver}"
+        - id: chat-websocket
+          uri: ${DISPATCH_SERVICE_URL:ws://dispatch-service:8083}
+          predicates:
+            - Path=/ws/**
+          # No JwtAuthFilter here — WebSocket upgrade can't carry Bearer header

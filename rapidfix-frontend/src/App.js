@@ -10,7 +10,7 @@ import './index.css';
 
 function ProtectedRoute({ children, allowedRole }) {
     const { isLoggedIn, user } = useAuth();
-    if (!isLoggedIn) return <Navigate to="/login" replace />;
+    if (!isLoggedIn) return <Navigate to="/" replace />;
     if (allowedRole && user?.role !== allowedRole) {
         return <Navigate to={user?.role === 'TECHNICIAN' ? '/technician/dashboard' : '/user/dashboard'} replace />;
     }
