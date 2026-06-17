@@ -1,13 +1,26 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, Zap } from 'lucide-react';
+import { LogOut, Zap, Sun, Moon } from 'lucide-react';
 import { Badge } from './UI';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('rapidfix-theme') || 'dark';
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('rapidfix-theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+  };
 
   const handleLogout = () => { logout(); navigate('/login'); };
 
@@ -28,7 +41,7 @@ export default function Navbar() {
   return (
     <nav style={{
       position: 'sticky', top: 0, zIndex: 100,
-      background: 'rgba(10,10,15,0.85)', backdropFilter: 'blur(12px)',
+      background: 'rgba(var(--nav-bg),0.85)', backdropFilter: 'blur(12px)',
       borderBottom: '1px solid var(--border)',
       padding: '0 24px', height: '60px',
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -61,8 +74,21 @@ export default function Navbar() {
         ))}
       </div>
 
-      {/* User info + logout */}
+      {/* User info + Theme Toggle + logout */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <button onClick={toggleTheme} style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          width: '36px', height: '36px', borderRadius: 'var(--radius2)',
+          border: '1px solid var(--border)', background: 'transparent',
+          color: 'var(--text2)', cursor: 'pointer', transition: 'all var(--transition)',
+        }}
+        onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.color = 'var(--accent)'; }}
+        onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text2)'; }}
+        title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+        >
+          {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+        </button>
+
         <div style={{ textAlign: 'right' }}>
           <div style={{ fontSize: '13px', fontWeight: 500 }}>{user?.name}</div>
           <Badge>{user?.role}</Badge>

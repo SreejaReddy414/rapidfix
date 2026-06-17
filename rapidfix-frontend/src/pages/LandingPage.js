@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Zap, Clock, Shield, MapPin, Star, ChevronRight, Wrench, Droplets, Wind, Paintbrush, Plug, Bug, Hammer, ArrowRight } from 'lucide-react';
+import { Zap, Clock, Shield, MapPin, Star, ChevronRight, Wrench, Droplets, Wind, Paintbrush, Plug, Bug, Hammer, ArrowRight, Sun, Moon } from 'lucide-react';
 
 // ─── CONSTANTS ────────────────────────────────────────────────
 const SERVICES = [
@@ -405,7 +405,7 @@ function CTA({ onGetStarted }) {
                     Something broken?
                 </h2>
                 <p style={{ fontSize: '18px', color: 'var(--text2)', marginBottom: '40px', lineHeight: 1.7 }}>
-                    Join 50,000+ homeowners who trust RapidFix for fast, reliable repairs.
+                    Join homeowners who trust RapidFix for fast, reliable repairs.
                 </p>
                 <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
                     <button onClick={onGetStarted} style={{
@@ -460,12 +460,25 @@ function LandingNav({ onGetStarted }) {
         return () => window.removeEventListener('scroll', fn);
     }, []);
 
+    const [theme, setTheme] = useState(() => {
+        return localStorage.getItem('rapidfix-theme') || 'dark';
+    });
+
+    useEffect(() => {
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('rapidfix-theme', theme);
+    }, [theme]);
+
+    const toggleTheme = () => {
+        setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+    };
+
     return (
         <nav style={{
             position: 'fixed', top: 0, left: 0, right: 0, zIndex: 999,
             padding: '0 24px', height: '64px',
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            background: scrolled ? 'rgba(10,10,15,0.9)' : 'transparent',
+            background: scrolled ? 'rgba(var(--nav-bg),0.9)' : 'transparent',
             backdropFilter: scrolled ? 'blur(12px)' : 'none',
             borderBottom: scrolled ? '1px solid var(--border)' : '1px solid transparent',
             transition: 'all 0.3s ease',
@@ -495,6 +508,19 @@ function LandingNav({ onGetStarted }) {
 
             {/* CTA */}
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <button onClick={toggleTheme} style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    width: '36px', height: '36px', borderRadius: '9px',
+                    border: '1px solid var(--border)', background: 'transparent',
+                    color: 'var(--text2)', cursor: 'pointer', transition: 'all 0.2s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.color = 'var(--accent)'; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text2)'; }}
+                title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                >
+                    {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+                </button>
+
                 <a href="/login" style={{
                     padding: '8px 18px', borderRadius: '9px', textDecoration: 'none',
                     color: 'var(--text2)', fontSize: '14px', fontWeight: 500,

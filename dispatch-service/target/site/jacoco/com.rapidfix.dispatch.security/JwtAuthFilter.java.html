@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>JwtAuthFilter.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">dispatch-service</a> &gt; <a href="index.source.html" class="el_package">com.rapidfix.dispatch.security</a> &gt; <span class="el_source">JwtAuthFilter.java</span></div><h1>JwtAuthFilter.java</h1><pre class="source lang-java linenums">package com.rapidfix.dispatch.security;
+import jakarta.servlet.*;
+import jakarta.servlet.http.*;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
+import org.springframework.web.filter.OncePerRequestFilter;
+import java.io.IOException;
+import java.util.List;
+
+<span class="fc" id="L15">@Component @RequiredArgsConstructor @Slf4j</span>
+public class JwtAuthFilter extends OncePerRequestFilter {
+    private final JwtUtil jwtUtil;
+    @Override
+    protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res,
+                                    FilterChain chain) throws ServletException, IOException {
+<span class="nc" id="L21">        String header = req.getHeader(&quot;Authorization&quot;);</span>
+<span class="nc bnc" id="L22" title="All 4 branches missed.">        if (StringUtils.hasText(header) &amp;&amp; header.startsWith(&quot;Bearer &quot;)) {</span>
+<span class="nc" id="L23">            String token = header.substring(7);</span>
+<span class="nc bnc" id="L24" title="All 2 branches missed.">            if (jwtUtil.validateToken(token)) {</span>
+<span class="nc" id="L25">                var auth = new UsernamePasswordAuthenticationToken(</span>
+<span class="nc" id="L26">                    jwtUtil.extractEmail(token), null,</span>
+<span class="nc" id="L27">                    List.of(new SimpleGrantedAuthority(&quot;ROLE_&quot; + jwtUtil.extractRole(token))));</span>
+<span class="nc" id="L28">                SecurityContextHolder.getContext().setAuthentication(auth);</span>
+            }
+        }
+<span class="nc" id="L31">        chain.doFilter(req, res);</span>
+<span class="nc" id="L32">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

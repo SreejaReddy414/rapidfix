@@ -1,0 +1,9 @@
+GROUP,PACKAGE,CLASS,INSTRUCTION_MISSED,INSTRUCTION_COVERED,BRANCH_MISSED,BRANCH_COVERED,LINE_MISSED,LINE_COVERED,COMPLEXITY_MISSED,COMPLEXITY_COVERED,METHOD_MISSED,METHOD_COVERED
+dispatch-service,com.rapidfix.dispatch,DispatchServiceApplication,5,3,0,0,2,1,1,1,1,1
+dispatch-service,com.rapidfix.dispatch.service.impl,DispatchServiceImpl,81,1248,0,34,11,251,2,45,2,28
+dispatch-service,com.rapidfix.dispatch.service.impl,DispatchServiceImpl.new ParameterizedTypeReference() {...},0,6,0,0,0,1,0,1,0,1
+dispatch-service,com.rapidfix.dispatch.controller,DispatchController,22,164,2,2,3,25,3,15,1,15
+dispatch-service,com.rapidfix.dispatch.scheduler,AutoAssignmentScheduler,0,25,0,0,0,7,0,3,0,3
+dispatch-service,com.rapidfix.dispatch.security,JwtAuthFilter,46,10,6,0,10,1,4,2,1,2
+dispatch-service,com.rapidfix.dispatch.security,JwtUtil,0,70,0,2,0,14,0,9,0,8
+dispatch-service,com.rapidfix.dispatch.util,MessageService,0,33,0,0,0,11,0,3,0,3
