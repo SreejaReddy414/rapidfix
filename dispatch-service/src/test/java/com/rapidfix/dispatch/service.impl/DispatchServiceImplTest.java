@@ -13,7 +13,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.*;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
-
+import com.rapidfix.dispatch.client.TechnicianServiceClient;
+import org.springframework.mail.javamail.JavaMailSender;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -27,14 +28,8 @@ class DispatchServiceImplTest {
     @Mock private ServiceRequestRepository requestRepo;
     @Mock private DispatchLogRepository logRepo;
     @Mock private ServiceRequestMapper mapper;
-    @Mock private WebClient technicianWebClient;
-
-    // WebClient chain mocks
-    @Mock private WebClient.RequestHeadersUriSpec  requestHeadersUriSpec;
-    @Mock private WebClient.RequestHeadersSpec     requestHeadersSpec;
-    @Mock private WebClient.ResponseSpec           responseSpec;
-    @Mock private WebClient.RequestBodyUriSpec     requestBodyUriSpec;
-    @Mock private WebClient.RequestBodySpec        requestBodySpec;
+    @Mock private TechnicianServiceClient technicianServiceClient;
+    @Mock private JavaMailSender mailSender;
 
     private final MessageService messages = new MessageService();
     private DispatchServiceImpl service;
@@ -51,8 +46,7 @@ class DispatchServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        service = new DispatchServiceImpl(requestRepo, logRepo, mapper, technicianWebClient, messages);
-
+        service = new DispatchServiceImpl(requestRepo, logRepo, mapper, technicianServiceClient, messages, mailSender);
         pendingRequest = ServiceRequest.builder()
                 .id(1L).userId(10L).userName("sreeja@gmail.com")
                 .serviceType(ServiceType.ELECTRICIAN)
@@ -160,7 +154,8 @@ class DispatchServiceImplTest {
         void createRequest_broadcastFailure_doesNotThrow() {
             when(requestRepo.save(any())).thenReturn(pendingRequest);
             when(mapper.toResponse(any())).thenReturn(requestResponse);
-            when(technicianWebClient.get()).thenThrow(new RuntimeException("connection refused"));
+            when(technicianServiceClient.fetchNearbyTechnicians(anyDouble(), anyDouble(), anyDouble(), anyString()))
+                    .thenThrow(new RuntimeException("connection refused"));
 
             assertThatCode(() -> service.createRequest(createDto, 10L, "sreeja@gmail.com"))
                     .doesNotThrowAnyException();
@@ -372,7 +367,8 @@ class DispatchServiceImplTest {
             when(requestRepo.save(any())).thenReturn(quotedRequest);
             when(mapper.toResponse(any())).thenReturn(requestResponse);
             when(logRepo.save(any())).thenReturn(null);
-            when(technicianWebClient.get()).thenThrow(new RuntimeException("timeout"));
+            when(technicianServiceClient.fetchNearbyTechnicians(anyDouble(), anyDouble(), anyDouble(), anyString()))
+                    .thenThrow(new RuntimeException("timeout"));
 
             // Should not throw; distance defaults to 0
             assertThatCode(() -> service.submitQuote(1L, quoteRequest, 20L, "Dilip"))
@@ -491,7 +487,7 @@ class DispatchServiceImplTest {
 
             service.approveQuote(1L);
 
-            verify(technicianWebClient).patch();
+            verify(technicianServiceClient).updateTechnicianAvailability(anyLong(), anyString());
         }
 
         @Test
@@ -560,7 +556,7 @@ class DispatchServiceImplTest {
 
             service.rejectQuote(1L);
 
-            verify(technicianWebClient).patch();
+            verify(technicianServiceClient).updateTechnicianAvailability(anyLong(), anyString());
         }
 
         @Test
@@ -687,7 +683,7 @@ class DispatchServiceImplTest {
 
             service.completeRequest(1L, completionRequest);
 
-            verify(technicianWebClient).patch();
+            verify(technicianServiceClient).updateTechnicianAvailability(anyLong(), anyString());
         }
 
         @Test
@@ -732,7 +728,7 @@ class DispatchServiceImplTest {
             service.cancelRequest(1L);
 
             verify(requestRepo).save(argThat(sr -> sr.getStatus() == RequestStatus.CANCELLED));
-            verify(technicianWebClient, never()).patch();
+            verify(technicianServiceClient, never()).updateTechnicianAvailability(anyLong(), anyString());
         }
 
         @Test
@@ -745,7 +741,7 @@ class DispatchServiceImplTest {
 
             service.cancelRequest(1L);
 
-            verify(technicianWebClient).patch();
+            verify(technicianServiceClient).updateTechnicianAvailability(anyLong(), anyString());
         }
 
         @Test
@@ -758,7 +754,7 @@ class DispatchServiceImplTest {
 
             service.cancelRequest(1L);
 
-            verify(technicianWebClient).patch();
+            verify(technicianServiceClient).updateTechnicianAvailability(anyLong(), anyString());
         }
 
         @Test
@@ -843,7 +839,7 @@ class DispatchServiceImplTest {
 
             service.withdrawQuote(1L, 20L);
 
-            verify(technicianWebClient).patch();
+            verify(technicianServiceClient).updateTechnicianAvailability(anyLong(), anyString());
         }
 
         @Test
@@ -991,14 +987,9 @@ class DispatchServiceImplTest {
             when(requestRepo.findPendingRequestsOlderThan(any()))
                     .thenReturn(List.of(pendingRequest, sr2));
             // First call throws, second returns empty list
-            when(technicianWebClient.get())
+            when(technicianServiceClient.fetchNearbyTechnicians(anyDouble(), anyDouble(), anyDouble(), anyString()))
                     .thenThrow(new RuntimeException("down"))
-                    .thenReturn(requestHeadersUriSpec);
-            when(requestHeadersUriSpec.uri(any(java.util.function.Function.class)))
-                    .thenReturn(requestHeadersSpec);
-            when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
-            when(responseSpec.bodyToMono(any(org.springframework.core.ParameterizedTypeReference.class)))
-                    .thenReturn(Mono.just(List.of()));
+                    .thenReturn(List.of());
             when(requestRepo.save(any())).thenReturn(sr2);
 
             assertThatCode(() -> service.runAutoAssignment()).doesNotThrowAnyException();
@@ -1079,19 +1070,11 @@ class DispatchServiceImplTest {
     // ─── helpers ──────────────────────────────────────────────
 
     private void mockAvailabilityUpdate() {
-        when(technicianWebClient.patch()).thenReturn(requestBodyUriSpec);
-        when(requestBodyUriSpec.uri(anyString(), any(Object[].class))).thenReturn(requestBodySpec);
-        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.toBodilessEntity()).thenReturn(Mono.empty());
+        // void method - Mockito does nothing by default for mock void methods
     }
 
-    @SuppressWarnings("unchecked")
     private void mockGetNearbyTechnicians(List<NearbyTechnicianDto> result) {
-        when(technicianWebClient.get()).thenReturn(requestHeadersUriSpec);
-        when(requestHeadersUriSpec.uri(any(java.util.function.Function.class)))
-                .thenReturn(requestHeadersSpec);
-        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.bodyToMono(any(org.springframework.core.ParameterizedTypeReference.class)))
-                .thenReturn(Mono.just(result));
+        when(technicianServiceClient.fetchNearbyTechnicians(anyDouble(), anyDouble(), anyDouble(), anyString()))
+                .thenReturn(result);
     }
 }
