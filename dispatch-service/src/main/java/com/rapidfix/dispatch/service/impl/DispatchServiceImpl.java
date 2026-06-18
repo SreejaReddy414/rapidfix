@@ -17,6 +17,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
 import java.time.LocalDateTime;
 import java.util.*;
+import com.rapidfix.dispatch.client.TechnicianServiceClient;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
 
 @Service @RequiredArgsConstructor @Slf4j
 public class DispatchServiceImpl implements DispatchService {
@@ -24,14 +27,17 @@ public class DispatchServiceImpl implements DispatchService {
     private final ServiceRequestRepository requestRepo;
     private final DispatchLogRepository logRepo;
     private final ServiceRequestMapper mapper;
-    private final WebClient technicianWebClient;
+    private final TechnicianServiceClient technicianServiceClient;
     private final MessageService messages;
+    private final JavaMailSender mailSender;
 
     @Value("${dispatch.broadcast-timeout-seconds:60}")
     private int broadcastTimeoutSeconds;
 
-    @Value("${dispatch.auto-assign-radius-km:15.0}")
+    @Value("${dispatch.auto-assign-radius-km:20.0}")
     private double autoAssignRadiusKm;
+    @Value("${spring.mail.username}")
+    private String senderEmail;
 
     @Override @Transactional
     public ServiceRequestResponse createRequest(ServiceRequestCreate req, Long userId, String userEmail) {
@@ -100,7 +106,7 @@ public class DispatchServiceImpl implements DispatchService {
         if (sr.getDistanceKm() == null) {
             try {
                 NearbyTechnicianDto techInfo = fetchNearbyTechnicians(
-                        sr.getUserLatitude(), sr.getUserLongitude(), 200.0, sr.getServiceType().name())
+                        sr.getUserLatitude(), sr.getUserLongitude(), 20.0, sr.getServiceType().name())
                         .stream()
                         .filter(t -> t.getUserId().equals(technicianId))
                         .findFirst()
@@ -304,6 +310,7 @@ public class DispatchServiceImpl implements DispatchService {
         sr.setBroadcastAttempts(sr.getBroadcastAttempts() + 1);
         requestRepo.save(sr);
         updateTechnicianAvailability(best.getUserId(), "BUSY");
+        sendEmailToTechnician(best.getUserId(), sr,true);
         logAction(sr.getId(), best.getId(), "AUTO_ASSIGNED",
                 String.format("distance=%.2fkm rating=%.1f — default quote ₹%.0f",
                         best.getDistanceKm(), best.getRating(), total));
@@ -317,8 +324,10 @@ public class DispatchServiceImpl implements DispatchService {
                     sr.getUserLatitude(), sr.getUserLongitude(),
                     autoAssignRadiusKm, sr.getServiceType().name());
             log.info("Broadcasted request {} to {} technicians", sr.getId(), nearby.size());
-            nearby.forEach(t -> logAction(sr.getId(), t.getId(), "OFFERED",
-                    String.format("%.2fkm away", t.getDistanceKm())));
+            nearby.forEach(t ->
+            {logAction(sr.getId(), t.getId(), "OFFERED",
+                    String.format("%.2fkm away", t.getDistanceKm()));
+            sendEmailToTechnician(t.getUserId(), sr, false);});
         } catch (Exception e) {
             log.warn("Broadcast failed for request {}: {}", sr.getId(), e.getMessage());
         }
@@ -326,21 +335,7 @@ public class DispatchServiceImpl implements DispatchService {
 
     private List<NearbyTechnicianDto> fetchNearbyTechnicians(double lat, double lon,
                                                              double radius, String serviceType) {
-        try {
-            return technicianWebClient.get()
-                    .uri(u -> u.path("/api/technicians/nearby")
-                            .queryParam("latitude", lat)
-                            .queryParam("longitude", lon)
-                            .queryParam("radiusKm", radius)
-                            .queryParam("serviceType", serviceType)
-                            .build())
-                    .retrieve()
-                    .bodyToMono(new ParameterizedTypeReference<List<NearbyTechnicianDto>>() {})
-                    .block();
-        } catch (Exception e) {
-            log.warn("Failed to fetch nearby technicians: {}", e.getMessage());
-            return Collections.emptyList();
-        }
+        return technicianServiceClient.fetchNearbyTechnicians(lat, lon, radius, serviceType);
     }
 
     @Override @Transactional
@@ -351,13 +346,7 @@ public class DispatchServiceImpl implements DispatchService {
     }
 
     private void updateTechnicianAvailability(Long userId, String status) {
-        try {
-            technicianWebClient.patch()
-                    .uri("/api/technicians/user/{userId}/availability?status={status}", userId, status)
-                    .retrieve().toBodilessEntity().block();
-        } catch (Exception e) {
-            log.warn("Failed to update technician {} to {}: {}", userId, status, e.getMessage());
-        }
+        technicianServiceClient.updateTechnicianAvailability(userId, status);
     }
 
     private void logAction(Long requestId, Long technicianId, String action, String notes) {
@@ -413,5 +402,48 @@ public class DispatchServiceImpl implements DispatchService {
 
         log.info("Quote withdrawn for request {}. Back to PENDING.", requestId);
         return mapper.toResponse(requestRepo.save(sr));
+    }
+    private void sendEmailToTechnician(Long userId, ServiceRequest sr, boolean isAutoAssigned) {
+        String email = fetchTechnicianEmail(userId);
+        if (email == null) {
+            log.warn("Could not send email: email not found for technician userId {}", userId);
+            return;
+        }
+
+        String subject = isAutoAssigned
+                ? "New Auto-Assigned Job: " + sr.getServiceType()
+                : "New Available Job Opportunity: " + sr.getServiceType();
+
+        String bodyPrefix = isAutoAssigned
+                ? "You have been auto-assigned to a new job request (ID: " + sr.getId() + ").\n"
+                : "A new job request has been posted near your location (ID: " + sr.getId() + "). Please check your dashboard to submit a quote.\n";
+
+        String body = String.format(
+                "Hello %s,\n\n" +
+                        "%s" +
+                        "Service Type: %s\n" +
+                        "Description: %s\n" +
+                        "Address: %s\n\n" +
+                        "Please log in to the RapidFix Dashboard to view details.\n\n" +
+                        "Regards,\nRapidFix Team",
+                sr.getTechnicianName() != null ? sr.getTechnicianName() : "Technician",
+                bodyPrefix, sr.getServiceType(), sr.getDescription(), sr.getAddress()
+        );
+
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo(email);
+            message.setSubject(subject);
+            message.setText(body);
+            message.setFrom(senderEmail);
+
+            mailSender.send(message);
+            log.info("Email notification sent to technician userId {} ({}) - autoAssigned={}", userId, email, isAutoAssigned);
+        } catch (Exception e) {
+            log.error("Failed to send SMTP email from {}: {}", senderEmail, e.getMessage(), e);
+        }
+    }
+    private String fetchTechnicianEmail(Long userId) {
+        return technicianServiceClient.fetchTechnicianEmail(userId);
     }
 }
