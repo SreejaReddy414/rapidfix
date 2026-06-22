@@ -11,11 +11,12 @@ public interface DispatchService {
     PagedResponse<ServiceRequestResponse> getRequestsByUser(Long userId, Pageable pageable);
     PagedResponse<ServiceRequestResponse> getRequestsByTechnician(Long technicianId, Pageable pageable);
     PagedResponse<ServiceRequestResponse> getRequestsByStatus(RequestStatus status, Pageable pageable);
-    PagedResponse<ServiceRequestResponse> getAvailableRequestsByServiceType(ServiceType serviceType, Pageable pageable);
+    PagedResponse<ServiceRequestResponse> getAvailableRequestsByServiceType(ServiceType serviceType, Long technicianId, Pageable pageable);
     ServiceRequestResponse withdrawQuote(Long requestId, Long technicianId);
     ServiceRequestResponse submitQuote(Long requestId, QuoteRequest quote, Long technicianId, String technicianName);
-    ServiceRequestResponse approveQuote(Long requestId);
-    ServiceRequestResponse rejectQuote(Long requestId);
+    ServiceRequestResponse approveQuote(Long requestId, Long technicianId);
+    ServiceRequestResponse rejectQuote(Long requestId, Long technicianId);
+    java.util.List<QuoteResponse> getQuotesForRequest(Long requestId);
 
     ServiceRequestResponse markInProgress(Long requestId);
     ServiceRequestResponse completeRequest(Long requestId, CompletionRequest completion);

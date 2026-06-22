@@ -30,6 +30,7 @@ class DispatchServiceImplTest {
     @Mock private ServiceRequestMapper mapper;
     @Mock private TechnicianServiceClient technicianServiceClient;
     @Mock private JavaMailSender mailSender;
+    @Mock private QuoteRepository quoteRepo;
 
     private final MessageService messages = new MessageService();
     private DispatchServiceImpl service;
@@ -46,7 +47,24 @@ class DispatchServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        service = new DispatchServiceImpl(requestRepo, logRepo, mapper, technicianServiceClient, messages, mailSender);
+        service = new DispatchServiceImpl(requestRepo, logRepo, mapper, technicianServiceClient, messages, mailSender, quoteRepo);
+        lenient().when(technicianServiceClient.fetchTechnicianEmail(anyLong())).thenReturn("tech@rapidfix.com");
+        
+        Quote mockQ = Quote.builder()
+                .requestId(1L)
+                .technicianId(20L)
+                .hourlyRate(150.0)
+                .estimatedHours(2.0)
+                .applianceCharge(0.0)
+                .travelCharge(0.0)
+                .distanceKm(2.5)
+                .totalAmount(300.0)
+                .status(QuoteStatus.PENDING)
+                .build();
+        lenient().when(quoteRepo.findByRequestIdAndTechnicianId(anyLong(), anyLong()))
+                .thenReturn(Optional.of(mockQ));
+        lenient().when(quoteRepo.findByRequestId(anyLong()))
+                .thenReturn(List.of(mockQ));
         pendingRequest = ServiceRequest.builder()
                 .id(1L).userId(10L).userName("sreeja@gmail.com")
                 .serviceType(ServiceType.ELECTRICIAN)
@@ -242,15 +260,15 @@ class DispatchServiceImplTest {
         }
 
         @Test
-        @DisplayName("getAvailableRequestsByServiceType() returns PENDING requests for service type")
+        @DisplayName("getAvailableRequestsByServiceType() returns PENDING/QUOTED requests for service type")
         void getAvailableByServiceType_success() {
             Page<ServiceRequest> page = new PageImpl<>(List.of(pendingRequest), pageable, 1);
-            when(requestRepo.findByStatusAndServiceType(RequestStatus.PENDING, ServiceType.ELECTRICIAN, pageable))
+            when(requestRepo.findAvailableRequestsForTechnician(ServiceType.ELECTRICIAN, 20L, pageable))
                     .thenReturn(page);
             when(mapper.toResponse(pendingRequest)).thenReturn(requestResponse);
 
             PagedResponse<ServiceRequestResponse> result =
-                    service.getAvailableRequestsByServiceType(ServiceType.ELECTRICIAN, pageable);
+                    service.getAvailableRequestsByServiceType(ServiceType.ELECTRICIAN, 20L, pageable);
 
             assertThat(result.getContent()).hasSize(1);
         }
@@ -407,13 +425,12 @@ class DispatchServiceImplTest {
         }
 
         @Test
-        @DisplayName("Should throw InvalidStateException when request is not PENDING")
+        @DisplayName("Should throw InvalidStateException when request is already APPROVED")
         void submitQuote_notPending_throwsException() {
-            when(requestRepo.findById(1L)).thenReturn(Optional.of(quotedRequest));
+            when(requestRepo.findById(1L)).thenReturn(Optional.of(approvedRequest));
 
             assertThatThrownBy(() -> service.submitQuote(1L, quoteRequest, 20L, "Dilip"))
-                    .isInstanceOf(InvalidStateException.class)
-                    .hasMessageContaining("PENDING");
+                    .isInstanceOf(InvalidStateException.class);
         }
     }
 
@@ -434,7 +451,7 @@ class DispatchServiceImplTest {
             when(logRepo.save(any())).thenReturn(null);
             mockAvailabilityUpdate();
 
-            service.approveQuote(1L);
+            service.approveQuote(1L, 20L);
 
             verify(requestRepo).save(argThat(sr ->
                     sr.getStatus() == RequestStatus.APPROVED &&
@@ -451,7 +468,7 @@ class DispatchServiceImplTest {
             mockAvailabilityUpdate();
 
             LocalDateTime before = LocalDateTime.now();
-            service.approveQuote(1L);
+            service.approveQuote(1L, 20L);
             LocalDateTime after = LocalDateTime.now().plusHours(1);
 
             verify(requestRepo).save(argThat(sr ->
@@ -462,6 +479,20 @@ class DispatchServiceImplTest {
         @Test
         @DisplayName("ETA should use distanceKm when present")
         void approveQuote_etaUsesDistanceKm() {
+            Quote mockLongDistQuote = Quote.builder()
+                    .requestId(1L)
+                    .technicianId(20L)
+                    .hourlyRate(150.0)
+                    .estimatedHours(2.0)
+                    .applianceCharge(0.0)
+                    .travelCharge(0.0)
+                    .distanceKm(30.0)
+                    .totalAmount(300.0)
+                    .status(QuoteStatus.PENDING)
+                    .build();
+            when(quoteRepo.findByRequestIdAndTechnicianId(1L, 20L)).thenReturn(Optional.of(mockLongDistQuote));
+            when(quoteRepo.findByRequestId(1L)).thenReturn(List.of(mockLongDistQuote));
+
             quotedRequest.setDistanceKm(30.0); // 30km @ 30km/h = 60 min + 5 = 65 min
             when(requestRepo.findById(1L)).thenReturn(Optional.of(quotedRequest));
             when(requestRepo.save(any())).thenReturn(approvedRequest);
@@ -470,7 +501,7 @@ class DispatchServiceImplTest {
             mockAvailabilityUpdate();
 
             LocalDateTime before = LocalDateTime.now().plusMinutes(60);
-            service.approveQuote(1L);
+            service.approveQuote(1L, 20L);
 
             verify(requestRepo).save(argThat(sr ->
                     sr.getEstimatedArrivalTime().isAfter(before)));
@@ -485,7 +516,7 @@ class DispatchServiceImplTest {
             when(logRepo.save(any())).thenReturn(null);
             mockAvailabilityUpdate();
 
-            service.approveQuote(1L);
+            service.approveQuote(1L, 20L);
 
             verify(technicianServiceClient).updateTechnicianAvailability(anyLong(), anyString());
         }
@@ -495,7 +526,7 @@ class DispatchServiceImplTest {
         void approveQuote_notQuoted_throwsException() {
             when(requestRepo.findById(1L)).thenReturn(Optional.of(pendingRequest));
 
-            assertThatThrownBy(() -> service.approveQuote(1L))
+            assertThatThrownBy(() -> service.approveQuote(1L, 20L))
                     .isInstanceOf(InvalidStateException.class);
         }
     }
@@ -517,7 +548,7 @@ class DispatchServiceImplTest {
             when(logRepo.save(any())).thenReturn(null);
             mockAvailabilityUpdate();
 
-            service.rejectQuote(1L);
+            service.rejectQuote(1L, 20L);
 
             verify(requestRepo).save(argThat(sr -> {
                 assertThat(sr.getStatus()).isEqualTo(RequestStatus.PENDING);
@@ -539,7 +570,7 @@ class DispatchServiceImplTest {
             when(logRepo.save(any())).thenReturn(null);
             mockAvailabilityUpdate();
 
-            service.rejectQuote(1L);
+            service.rejectQuote(1L, 20L);
 
             verify(requestRepo).save(argThat(sr ->
                     sr.getBroadcastedAt() != null && sr.getBroadcastedAt().isAfter(before)));
@@ -554,7 +585,7 @@ class DispatchServiceImplTest {
             when(logRepo.save(any())).thenReturn(null);
             mockAvailabilityUpdate();
 
-            service.rejectQuote(1L);
+            service.rejectQuote(1L, 20L);
 
             verify(technicianServiceClient).updateTechnicianAvailability(anyLong(), anyString());
         }
@@ -564,7 +595,7 @@ class DispatchServiceImplTest {
         void rejectQuote_notQuoted_throwsException() {
             when(requestRepo.findById(1L)).thenReturn(Optional.of(pendingRequest));
 
-            assertThatThrownBy(() -> service.rejectQuote(1L))
+            assertThatThrownBy(() -> service.rejectQuote(1L, 20L))
                     .isInstanceOf(InvalidStateException.class);
         }
     }
@@ -843,9 +874,9 @@ class DispatchServiceImplTest {
         }
 
         @Test
-        @DisplayName("Should throw InvalidStateException when request is not QUOTED")
-        void withdrawQuote_notQuoted_throwsException() {
-            when(requestRepo.findById(1L)).thenReturn(Optional.of(pendingRequest));
+        @DisplayName("Should throw InvalidStateException when request is already approved")
+        void withdrawQuote_alreadyApproved_throwsException() {
+            when(requestRepo.findById(1L)).thenReturn(Optional.of(approvedRequest));
 
             assertThatThrownBy(() -> service.withdrawQuote(1L, 20L))
                     .isInstanceOf(InvalidStateException.class)
@@ -856,6 +887,7 @@ class DispatchServiceImplTest {
         @DisplayName("Should throw InvalidStateException when different technician tries to withdraw")
         void withdrawQuote_wrongTechnician_throwsException() {
             when(requestRepo.findById(1L)).thenReturn(Optional.of(quotedRequest)); // technicianId=20
+            when(quoteRepo.findByRequestIdAndTechnicianId(1L, 99L)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> service.withdrawQuote(1L, 99L))  // wrong technician
                     .isInstanceOf(InvalidStateException.class)
@@ -1005,9 +1037,9 @@ class DispatchServiceImplTest {
     class StatusLifecycleTests {
 
         @Test
-        @DisplayName("Cannot quote a QUOTED request")
-        void cannotQuoteAlreadyQuoted() {
-            when(requestRepo.findById(1L)).thenReturn(Optional.of(quotedRequest));
+        @DisplayName("Cannot quote an APPROVED request")
+        void cannotQuoteAlreadyApproved() {
+            when(requestRepo.findById(1L)).thenReturn(Optional.of(approvedRequest));
             assertThatThrownBy(() -> service.submitQuote(1L, quoteRequest, 20L, "Dilip"))
                     .isInstanceOf(InvalidStateException.class);
         }
@@ -1016,7 +1048,7 @@ class DispatchServiceImplTest {
         @DisplayName("Cannot approve a PENDING request")
         void cannotApprovePending() {
             when(requestRepo.findById(1L)).thenReturn(Optional.of(pendingRequest));
-            assertThatThrownBy(() -> service.approveQuote(1L))
+            assertThatThrownBy(() -> service.approveQuote(1L, 20L))
                     .isInstanceOf(InvalidStateException.class);
         }
 
@@ -1050,7 +1082,7 @@ class DispatchServiceImplTest {
         @DisplayName("Cannot reject a PENDING request")
         void cannotRejectPending() {
             when(requestRepo.findById(1L)).thenReturn(Optional.of(pendingRequest));
-            assertThatThrownBy(() -> service.rejectQuote(1L))
+            assertThatThrownBy(() -> service.rejectQuote(1L, 20L))
                     .isInstanceOf(InvalidStateException.class);
         }
 

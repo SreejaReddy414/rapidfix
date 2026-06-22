@@ -2,6 +2,7 @@ C:\Users\MettupallySreejaRedd\SpringT\RapidFix-Complete\dispatch-service\src\mai
 C:\Users\MettupallySreejaRedd\SpringT\RapidFix-Complete\dispatch-service\src\main\java\com\rapidfix\dispatch\mapper\ServiceRequestMapper.java
 C:\Users\MettupallySreejaRedd\SpringT\RapidFix-Complete\dispatch-service\src\main\java\com\rapidfix\dispatch\dto\QuoteRequest.java
 C:\Users\MettupallySreejaRedd\SpringT\RapidFix-Complete\dispatch-service\src\main\java\com\rapidfix\dispatch\repository\DispatchLogRepository.java
+C:\Users\MettupallySreejaRedd\SpringT\RapidFix-Complete\dispatch-service\src\main\java\com\rapidfix\dispatch\dto\QuoteResponse.java
 C:\Users\MettupallySreejaRedd\SpringT\RapidFix-Complete\dispatch-service\src\main\java\com\rapidfix\dispatch\entity\ServiceRequest.java
 C:\Users\MettupallySreejaRedd\SpringT\RapidFix-Complete\dispatch-service\src\main\java\com\rapidfix\dispatch\dto\ServiceRequestCreate.java
 C:\Users\MettupallySreejaRedd\SpringT\RapidFix-Complete\dispatch-service\src\main\java\com\rapidfix\dispatch\dto\PagedResponse.java
@@ -14,6 +15,8 @@ C:\Users\MettupallySreejaRedd\SpringT\RapidFix-Complete\dispatch-service\src\mai
 C:\Users\MettupallySreejaRedd\SpringT\RapidFix-Complete\dispatch-service\src\main\java\com\rapidfix\dispatch\client\TechnicianServiceClient.java
 C:\Users\MettupallySreejaRedd\SpringT\RapidFix-Complete\dispatch-service\src\main\java\com\rapidfix\dispatch\entity\ServiceType.java
 C:\Users\MettupallySreejaRedd\SpringT\RapidFix-Complete\dispatch-service\src\main\java\com\rapidfix\dispatch\config\WebSocketConfig.java
+C:\Users\MettupallySreejaRedd\SpringT\RapidFix-Complete\dispatch-service\src\main\java\com\rapidfix\dispatch\repository\QuoteRepository.java
+C:\Users\MettupallySreejaRedd\SpringT\RapidFix-Complete\dispatch-service\src\main\java\com\rapidfix\dispatch\entity\Quote.java
 C:\Users\MettupallySreejaRedd\SpringT\RapidFix-Complete\dispatch-service\src\main\java\com\rapidfix\dispatch\security\JwtAuthFilter.java
 C:\Users\MettupallySreejaRedd\SpringT\RapidFix-Complete\dispatch-service\src\main\java\com\rapidfix\dispatch\exception\GlobalExceptionHandler.java
 C:\Users\MettupallySreejaRedd\SpringT\RapidFix-Complete\dispatch-service\src\main\java\com\rapidfix\dispatch\service\impl\DispatchServiceImpl.java
@@ -22,6 +25,7 @@ C:\Users\MettupallySreejaRedd\SpringT\RapidFix-Complete\dispatch-service\src\mai
 C:\Users\MettupallySreejaRedd\SpringT\RapidFix-Complete\dispatch-service\src\main\java\com\rapidfix\dispatch\exception\ResourceNotFoundException.java
 C:\Users\MettupallySreejaRedd\SpringT\RapidFix-Complete\dispatch-service\src\main\java\com\rapidfix\dispatch\config\swagger\SwaggerConfig.java
 C:\Users\MettupallySreejaRedd\SpringT\RapidFix-Complete\dispatch-service\src\main\java\com\rapidfix\dispatch\dto\CompletionRequest.java
+C:\Users\MettupallySreejaRedd\SpringT\RapidFix-Complete\dispatch-service\src\main\java\com\rapidfix\dispatch\entity\QuoteStatus.java
 C:\Users\MettupallySreejaRedd\SpringT\RapidFix-Complete\dispatch-service\src\main\java\com\rapidfix\dispatch\util\MessageService.java
 C:\Users\MettupallySreejaRedd\SpringT\RapidFix-Complete\dispatch-service\src\main\java\com\rapidfix\dispatch\entity\ChatMessage.java
 C:\Users\MettupallySreejaRedd\SpringT\RapidFix-Complete\dispatch-service\src\main\java\com\rapidfix\dispatch\security\JwtUtil.java

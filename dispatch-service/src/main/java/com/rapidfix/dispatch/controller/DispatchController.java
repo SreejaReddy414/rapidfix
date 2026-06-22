@@ -16,6 +16,8 @@ import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.security.access.AccessDeniedException;
 
 @RestController
 @RequestMapping("/api/requests")
@@ -36,32 +38,45 @@ public class DispatchController {
         String token = extractToken(httpRequest);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(dispatchService.createRequest(request,
-                        jwtUtil.extractUserId(token), jwtUtil.extractEmail(token)));
+                        getUserIdFromToken(token), getEmailFromToken(token)));
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "Get service request by ID")
-    public ResponseEntity<ServiceRequestResponse> getById(@PathVariable Long id) {
-        return ResponseEntity.ok(dispatchService.getRequestById(id));
+    public ResponseEntity<ServiceRequestResponse> getById(@PathVariable Long id, HttpServletRequest httpRequest) {
+        String token = extractToken(httpRequest);
+        Long userId = getUserIdFromToken(token);
+        String role = getRoleFromToken(token);
+        ServiceRequestResponse sr = dispatchService.getRequestById(id);
+        if (!"ADMIN".equals(role) && userId != null && userId != 0L &&
+                (sr.getUserId() == null || !sr.getUserId().equals(userId)) &&
+                (sr.getTechnicianId() == null || !userId.equals(sr.getTechnicianId()))) {
+            throw new AccessDeniedException("Access denied. You do not own this request resource.");
+        }
+        return ResponseEntity.ok(sr);
     }
 
-    @GetMapping("/user/{userId}")
-    @Operation(summary = "Get all requests by user (paginated)")
+    @GetMapping("/my-requests")
+    @PreAuthorize("hasRole('USER')")
+    @Operation(summary = "Get all requests for the currently logged in user (paginated)")
     public ResponseEntity<PagedResponse<ServiceRequestResponse>> getByUser(
-            @PathVariable Long userId,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        return ResponseEntity.ok(dispatchService.getRequestsByUser(userId,
+            @RequestParam(defaultValue = "10") int size,
+            HttpServletRequest httpRequest) {
+        String token = extractToken(httpRequest);
+        return ResponseEntity.ok(dispatchService.getRequestsByUser(getUserIdFromToken(token),
                 PageRequest.of(page, size, Sort.by("createdAt").descending())));
     }
 
-    @GetMapping("/technician/{technicianId}")
-    @Operation(summary = "Get all jobs for a technician (paginated)")
+    @GetMapping("/my-jobs")
+    @PreAuthorize("hasRole('TECHNICIAN')")
+    @Operation(summary = "Get all jobs for the currently logged in technician (paginated)")
     public ResponseEntity<PagedResponse<ServiceRequestResponse>> getByTechnician(
-            @PathVariable Long technicianId,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        return ResponseEntity.ok(dispatchService.getRequestsByTechnician(technicianId,
+            @RequestParam(defaultValue = "10") int size,
+            HttpServletRequest httpRequest) {
+        String token = extractToken(httpRequest);
+        return ResponseEntity.ok(dispatchService.getRequestsByTechnician(getUserIdFromToken(token),
                 PageRequest.of(page, size, Sort.by("createdAt").descending())));
     }
 
@@ -79,7 +94,13 @@ public class DispatchController {
     @PatchMapping("/{id}/mark-rated")
     @PreAuthorize("hasRole('USER')")
     @Operation(summary = "Mark a completed request as rated")
-    public ResponseEntity<ServiceRequestResponse> markAsRated(@PathVariable Long id) {
+    public ResponseEntity<ServiceRequestResponse> markAsRated(@PathVariable Long id, HttpServletRequest httpRequest) {
+        String token = extractToken(httpRequest);
+        Long userId = getUserIdFromToken(token);
+        ServiceRequestResponse sr = dispatchService.getRequestById(id);
+        if (userId != null && userId != 0L && (sr.getUserId() == null || !sr.getUserId().equals(userId))) {
+            throw new AccessDeniedException("Access denied. You do not own this request.");
+        }
         return ResponseEntity.ok(dispatchService.markAsRated(id));
     }
 
@@ -89,9 +110,12 @@ public class DispatchController {
     public ResponseEntity<PagedResponse<ServiceRequestResponse>> getAvailableRequests(
             @RequestParam ServiceType serviceType,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "10") int size,
+            HttpServletRequest httpRequest) {
+        String token = extractToken(httpRequest);
+        Long technicianId = getUserIdFromToken(token);
         return ResponseEntity.ok(dispatchService.getAvailableRequestsByServiceType(
-                serviceType, PageRequest.of(page, size, Sort.by("createdAt").descending())));
+                serviceType, technicianId, PageRequest.of(page, size, Sort.by("createdAt").descending())));
     }
 
     @PostMapping("/{id}/quote")
@@ -104,27 +128,57 @@ public class DispatchController {
             HttpServletRequest httpRequest) {
         String token = extractToken(httpRequest);
         return ResponseEntity.ok(dispatchService.submitQuote(id, quoteRequest,
-                jwtUtil.extractUserId(token), jwtUtil.extractName(token)));
+                getUserIdFromToken(token), getNameFromToken(token)));
     }
 
     @PostMapping("/{id}/approve-quote")
     @PreAuthorize("hasRole('USER')")
     @Operation(summary = "Approve the technician's quote — technician will now visit (USER only)")
-    public ResponseEntity<ServiceRequestResponse> approveQuote(@PathVariable Long id) {
-        return ResponseEntity.ok(dispatchService.approveQuote(id));
+    public ResponseEntity<ServiceRequestResponse> approveQuote(
+            @PathVariable Long id,
+            @RequestParam Long technicianId,
+            HttpServletRequest httpRequest) {
+        String token = extractToken(httpRequest);
+        Long userId = getUserIdFromToken(token);
+        ServiceRequestResponse sr = dispatchService.getRequestById(id);
+        if (userId != null && userId != 0L && (sr.getUserId() == null || !sr.getUserId().equals(userId))) {
+            throw new AccessDeniedException("Access denied. You do not own this request.");
+        }
+        return ResponseEntity.ok(dispatchService.approveQuote(id, technicianId));
     }
 
     @PostMapping("/{id}/reject-quote")
     @PreAuthorize("hasRole('USER')")
     @Operation(summary = "Reject the quote — request returns to PENDING for other technicians (USER only)")
-    public ResponseEntity<ServiceRequestResponse> rejectQuote(@PathVariable Long id) {
-        return ResponseEntity.ok(dispatchService.rejectQuote(id));
+    public ResponseEntity<ServiceRequestResponse> rejectQuote(
+            @PathVariable Long id,
+            @RequestParam Long technicianId,
+            HttpServletRequest httpRequest) {
+        String token = extractToken(httpRequest);
+        Long userId = getUserIdFromToken(token);
+        ServiceRequestResponse sr = dispatchService.getRequestById(id);
+        if (userId != null && userId != 0L && (sr.getUserId() == null || !sr.getUserId().equals(userId))) {
+            throw new AccessDeniedException("Access denied. You do not own this request.");
+        }
+        return ResponseEntity.ok(dispatchService.rejectQuote(id, technicianId));
+    }
+
+    @GetMapping("/{id}/quotes")
+    @Operation(summary = "Get all quotes for a request")
+    public ResponseEntity<java.util.List<com.rapidfix.dispatch.dto.QuoteResponse>> getQuotes(@PathVariable Long id) {
+        return ResponseEntity.ok(dispatchService.getQuotesForRequest(id));
     }
 
     @PatchMapping("/{id}/in-progress")
     @PreAuthorize("hasRole('TECHNICIAN')")
     @Operation(summary = "Mark arrived on site and working (TECHNICIAN only — only after quote approved)")
-    public ResponseEntity<ServiceRequestResponse> markInProgress(@PathVariable Long id) {
+    public ResponseEntity<ServiceRequestResponse> markInProgress(@PathVariable Long id, HttpServletRequest httpRequest) {
+        String token = extractToken(httpRequest);
+        Long userId = getUserIdFromToken(token);
+        ServiceRequestResponse sr = dispatchService.getRequestById(id);
+        if (userId != null && userId != 0L && (sr.getTechnicianId() == null || !userId.equals(sr.getTechnicianId()))) {
+            throw new AccessDeniedException("Access denied. You are not the assigned technician.");
+        }
         return ResponseEntity.ok(dispatchService.markInProgress(id));
     }
 
@@ -133,28 +187,68 @@ public class DispatchController {
     @Operation(summary = "Complete the job with actual hours worked (TECHNICIAN only)")
     public ResponseEntity<ServiceRequestResponse> complete(
             @PathVariable Long id,
-            @Valid @RequestBody CompletionRequest completion) {
+            @Valid @RequestBody CompletionRequest completion,
+            HttpServletRequest httpRequest) {
+        String token = extractToken(httpRequest);
+        Long userId = getUserIdFromToken(token);
+        ServiceRequestResponse sr = dispatchService.getRequestById(id);
+        if (userId != null && userId != 0L && (sr.getTechnicianId() == null || !userId.equals(sr.getTechnicianId()))) {
+            throw new AccessDeniedException("Access denied. You are not the assigned technician.");
+        }
         return ResponseEntity.ok(dispatchService.completeRequest(id, completion));
     }
 
     @PatchMapping("/{id}/cancel")
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     @Operation(summary = "Cancel a service request (USER or ADMIN)")
-    public ResponseEntity<ServiceRequestResponse> cancel(@PathVariable Long id) {
+    public ResponseEntity<ServiceRequestResponse> cancel(@PathVariable Long id, HttpServletRequest httpRequest) {
+        String token = extractToken(httpRequest);
+        Long userId = getUserIdFromToken(token);
+        String role = getRoleFromToken(token);
+        ServiceRequestResponse sr = dispatchService.getRequestById(id);
+        if (!"ADMIN".equals(role) && userId != null && userId != 0L && (sr.getUserId() == null || !sr.getUserId().equals(userId))) {
+            throw new AccessDeniedException("Access denied. You cannot cancel this request.");
+        }
         return ResponseEntity.ok(dispatchService.cancelRequest(id));
     }
 
     @PatchMapping("/{id}/withdraw-quote")
+    @PreAuthorize("hasRole('TECHNICIAN')")
     public ResponseEntity<ServiceRequestResponse> withdrawQuote(
             @PathVariable Long id,
-            @RequestParam Long technicianId) {
-        return ResponseEntity.ok(dispatchService.withdrawQuote(id, technicianId));
+            HttpServletRequest httpRequest) {
+        String token = extractToken(httpRequest);
+        return ResponseEntity.ok(dispatchService.withdrawQuote(id, getUserIdFromToken(token)));
+    }
+
+    private Long getUserIdFromToken(String token) {
+        if (!StringUtils.hasText(token)) return null;
+        try { return jwtUtil.extractUserId(token); }
+        catch (Exception e) { return null; }
+    }
+
+    private String getRoleFromToken(String token) {
+        if (!StringUtils.hasText(token)) return null;
+        try { return jwtUtil.extractRole(token); }
+        catch (Exception e) { return null; }
+    }
+
+    private String getNameFromToken(String token) {
+        if (!StringUtils.hasText(token)) return null;
+        try { return jwtUtil.extractName(token); }
+        catch (Exception e) { return null; }
+    }
+
+    private String getEmailFromToken(String token) {
+        if (!StringUtils.hasText(token)) return null;
+        try { return jwtUtil.extractEmail(token); }
+        catch (Exception e) { return null; }
     }
 
     private String extractToken(HttpServletRequest request) {
         String header = request.getHeader("Authorization");
         if (StringUtils.hasText(header) && header.startsWith("Bearer "))
             return header.substring(7);
-        throw new RuntimeException("Missing Authorization header");
+        throw new ResponseStatusException(org.springframework.http.HttpStatus.UNAUTHORIZED, "Missing or invalid Authorization header");
     }
 }

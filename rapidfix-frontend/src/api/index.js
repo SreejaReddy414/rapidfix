@@ -27,6 +27,8 @@ export const authAPI = {
 
 export const userAPI = {
   getMe: (id) => API.get(`/api/users/${id}`),
+  getAllUsers: (params) => API.get('/api/users', { params }),
+  deleteUser: (id) => API.delete(`/api/users/${id}`),
 };
 
 export const techAPI = {
@@ -38,21 +40,24 @@ export const techAPI = {
   updateRating:       (id, data)    => API.patch(`/api/technicians/${id}/rating`, data),
   getNearby:          (params)      => API.get('/api/technicians/nearby', { params }),
   getAll:             (params)      => API.get('/api/technicians', { params }),
+  updateProfile:      (data)        => API.put('/api/technicians/profile', data),
 };
 
 export const dispatchAPI = {
   createRequest:   (data)                => API.post('/api/requests', data),
   getById:         (id)                  => API.get(`/api/requests/${id}`),
-  getByUser:       (userId, params)      => API.get(`/api/requests/user/${userId}`, { params }),
-  getByTechnician: (techId, params)      => API.get(`/api/requests/technician/${techId}`, { params }),
+  getByUser:       (userId, params)      => API.get('/api/requests/my-requests', { params }),
+  getByTechnician: (techId, params)      => API.get('/api/requests/my-jobs', { params }),
   getAvailable:    (serviceType, params) => API.get('/api/requests/available', { params: { serviceType, ...params } }),
 
   submitQuote:    (id, data) => API.post(`/api/requests/${id}/quote`, data),
-  approveQuote:   (id)       => API.post(`/api/requests/${id}/approve-quote`),
-  rejectQuote:    (id)       => API.post(`/api/requests/${id}/reject-quote`),
+  approveQuote:   (id, technicianId) => API.post(`/api/requests/${id}/approve-quote?technicianId=${technicianId}`),
+  rejectQuote:    (id, technicianId) => API.post(`/api/requests/${id}/reject-quote?technicianId=${technicianId}`),
+  getQuotesForRequest: (id) => API.get(`/api/requests/${id}/quotes`),
   markAsRated:    (id)       => API.patch(`/api/requests/${id}/mark-rated`),
   withdrawQuote:  (id, technicianId) => API.patch(`/api/requests/${id}/withdraw-quote?technicianId=${technicianId}`), 
   markInProgress: (id)       => API.patch(`/api/requests/${id}/in-progress`),
   complete:       (id, data) => API.patch(`/api/requests/${id}/complete`, data),
   cancel:         (id)       => API.patch(`/api/requests/${id}/cancel`),
+  getRequestsByStatus: (status, params) => API.get(`/api/requests/status/${status}`, { params }),
 };

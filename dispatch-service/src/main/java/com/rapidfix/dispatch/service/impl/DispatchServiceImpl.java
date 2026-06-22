@@ -30,6 +30,7 @@ public class DispatchServiceImpl implements DispatchService {
     private final TechnicianServiceClient technicianServiceClient;
     private final MessageService messages;
     private final JavaMailSender mailSender;
+    private final com.rapidfix.dispatch.repository.QuoteRepository quoteRepo;
 
     @Value("${dispatch.broadcast-timeout-seconds:60}")
     private int broadcastTimeoutSeconds;
@@ -72,6 +73,9 @@ public class DispatchServiceImpl implements DispatchService {
 
     @Override @Transactional(readOnly = true)
     public PagedResponse<ServiceRequestResponse> getRequestsByTechnician(Long technicianId, Pageable pageable) {
+        if (technicianServiceClient.fetchTechnicianEmail(technicianId) == null) {
+            throw new ResourceNotFoundException("Technician not found with ID: " + technicianId);
+        }
         return toPagedResponse(requestRepo.findByTechnicianId(technicianId, pageable));
     }
 
@@ -82,10 +86,10 @@ public class DispatchServiceImpl implements DispatchService {
 
     @Override @Transactional(readOnly = true)
     public PagedResponse<ServiceRequestResponse> getAvailableRequestsByServiceType(
-            ServiceType serviceType, Pageable pageable) {
-        log.debug("Fetching PENDING requests for serviceType={}", serviceType);
-        Page<ServiceRequest> page = requestRepo.findByStatusAndServiceType(
-                RequestStatus.PENDING, serviceType, pageable);
+            ServiceType serviceType, Long technicianId, Pageable pageable) {
+        log.debug("Fetching PENDING/QUOTED requests for serviceType={}, technicianId={}", serviceType, technicianId);
+        Page<ServiceRequest> page = requestRepo.findAvailableRequestsForTechnician(
+                serviceType, technicianId, pageable);
         return toPagedResponse(page);
     }
 
@@ -95,7 +99,7 @@ public class DispatchServiceImpl implements DispatchService {
         log.info("Technician {} submitting quote for request {}", technicianId, requestId);
         ServiceRequest sr = findById(requestId);
 
-        if (sr.getStatus() != RequestStatus.PENDING)
+        if (sr.getStatus() != RequestStatus.PENDING && sr.getStatus() != RequestStatus.QUOTED)
             throw new InvalidStateException(
                     messages.get("error.quote.not.pending", sr.getStatus()));
 
@@ -125,6 +129,24 @@ public class DispatchServiceImpl implements DispatchService {
         double travelCharge = Math.max(0, distanceKm - freeRadiusKm) * ratePerKm;
         double total = (quote.getHourlyRate() * quote.getEstimatedHours()) + quote.getApplianceCharge() + travelCharge;
 
+        com.rapidfix.dispatch.entity.Quote q = quoteRepo.findByRequestIdAndTechnicianId(requestId, technicianId)
+                .orElse(com.rapidfix.dispatch.entity.Quote.builder()
+                        .requestId(requestId)
+                        .technicianId(technicianId)
+                        .build());
+        q.setTechnicianName(technicianName);
+        q.setHourlyRate(quote.getHourlyRate());
+        q.setEstimatedHours(quote.getEstimatedHours());
+        q.setApplianceCharge(quote.getApplianceCharge());
+        q.setTravelCharge(travelCharge);
+        q.setDistanceKm(distanceKm);
+        q.setTotalAmount(Math.round(total * 100.0) / 100.0);
+        q.setQuoteNote(quote.getQuoteNote());
+        q.setStatus(com.rapidfix.dispatch.entity.QuoteStatus.PENDING);
+        q.setTechnicianPhone(quote.getTechnicianPhone());
+        quoteRepo.save(q);
+
+        // Keep single-technician fields for compatibility (write latest quote details to request)
         sr.setTechnicianId(technicianId);
         sr.setTechnicianName(technicianName);
         sr.setHourlyRate(quote.getHourlyRate());
@@ -136,6 +158,7 @@ public class DispatchServiceImpl implements DispatchService {
         sr.setStatus(RequestStatus.QUOTED);
         sr.setQuotedAt(LocalDateTime.now());
         sr.setTechnicianPhone(quote.getTechnicianPhone());
+
         updateTechnicianAvailability(technicianId, "BUSY");
         logAction(requestId, technicianId, "QUOTED",
                 String.format("₹%.0f/hr × %.1fhr + ₹%.0f parts + ₹%.0f travel = ₹%.0f",
@@ -147,56 +170,89 @@ public class DispatchServiceImpl implements DispatchService {
     }
 
     @Override @Transactional
-    public ServiceRequestResponse approveQuote(Long requestId) {
-        log.info("User approving quote for request {}", requestId);
+    public ServiceRequestResponse approveQuote(Long requestId, Long technicianId) {
+        log.info("User approving quote from technician {} for request {}", technicianId, requestId);
         ServiceRequest sr = findById(requestId);
 
         if (sr.getStatus() != RequestStatus.QUOTED)
             throw new InvalidStateException(
-                    messages.get("error.quote.not.quoted.approve", sr.getStatus()));  // ← CHANGED
+                    messages.get("error.quote.not.quoted.approve", sr.getStatus()));
+
+        com.rapidfix.dispatch.entity.Quote approvedQuote = quoteRepo.findByRequestIdAndTechnicianId(requestId, technicianId)
+                .orElseThrow(() -> new ResourceNotFoundException("Quote not found"));
+
+        List<com.rapidfix.dispatch.entity.Quote> allQuotes = quoteRepo.findByRequestId(requestId);
+        for (com.rapidfix.dispatch.entity.Quote q : allQuotes) {
+            if (q.getTechnicianId().equals(technicianId)) {
+                q.setStatus(com.rapidfix.dispatch.entity.QuoteStatus.APPROVED);
+            } else {
+                q.setStatus(com.rapidfix.dispatch.entity.QuoteStatus.REJECTED);
+                updateTechnicianAvailability(q.getTechnicianId(), "AVAILABLE");
+            }
+            quoteRepo.save(q);
+        }
 
         sr.setStatus(RequestStatus.APPROVED);
         sr.setApprovedAt(LocalDateTime.now());
-       // sr.setApprovedAt(LocalDateTime.now());
+        sr.setTechnicianId(approvedQuote.getTechnicianId());
+        sr.setTechnicianName(approvedQuote.getTechnicianName());
+        sr.setTechnicianPhone(approvedQuote.getTechnicianPhone());
+        sr.setHourlyRate(approvedQuote.getHourlyRate());
+        sr.setEstimatedHours(approvedQuote.getEstimatedHours());
+        sr.setApplianceCharge(approvedQuote.getApplianceCharge());
+        sr.setTravelCharge(approvedQuote.getTravelCharge());
+        sr.setDistanceKm(approvedQuote.getDistanceKm());
+        sr.setTotalAmount(approvedQuote.getTotalAmount());
+        sr.setQuoteNote(approvedQuote.getQuoteNote());
 
-// Calculate ETA from saved distanceKm
-        double dist = sr.getDistanceKm() != null ? sr.getDistanceKm() : 2.0;
-        long travelMinutes = Math.round((dist / 30.0) * 60); // 30 km/h avg speed
-        long etaMinutes = travelMinutes + 5; // +5 min preparation
+        double dist = approvedQuote.getDistanceKm() != null ? approvedQuote.getDistanceKm() : 2.0;
+        long travelMinutes = Math.round((dist / 30.0) * 60);
+        long etaMinutes = travelMinutes + 5;
         sr.setEstimatedArrivalTime(LocalDateTime.now().plusMinutes(etaMinutes));
         log.info("ETA: {}km → {} mins", dist, etaMinutes);
-        updateTechnicianAvailability(sr.getTechnicianId(), "BUSY");
+        updateTechnicianAvailability(technicianId, "BUSY");
 
-        logAction(requestId, sr.getTechnicianId(), "QUOTE_APPROVED",
-                "User approved ₹" + sr.getTotalAmount());
-        log.info("Quote approved for request {}. Technician {} now visiting.", requestId, sr.getTechnicianId());
+        logAction(requestId, technicianId, "QUOTE_APPROVED",
+                "User approved ₹" + approvedQuote.getTotalAmount());
+        log.info("Quote approved for request {}. Technician {} now visiting.", requestId, technicianId);
         return mapper.toResponse(requestRepo.save(sr));
     }
 
     @Override @Transactional
-    public ServiceRequestResponse rejectQuote(Long requestId) {
-        log.info("User rejecting quote for request {}", requestId);
+    public ServiceRequestResponse rejectQuote(Long requestId, Long technicianId) {
+        log.info("User rejecting quote from technician {} for request {}", technicianId, requestId);
         ServiceRequest sr = findById(requestId);
 
         if (sr.getStatus() != RequestStatus.QUOTED)
             throw new InvalidStateException(
-                    messages.get("error.quote.not.quoted.reject", sr.getStatus()));  // ← CHANGED
+                    messages.get("error.quote.not.quoted.reject", sr.getStatus()));
 
-        Long rejectedTechnicianId = sr.getTechnicianId();
+        com.rapidfix.dispatch.entity.Quote q = quoteRepo.findByRequestIdAndTechnicianId(requestId, technicianId)
+                .orElseThrow(() -> new ResourceNotFoundException("Quote not found"));
+        q.setStatus(com.rapidfix.dispatch.entity.QuoteStatus.REJECTED);
+        quoteRepo.save(q);
 
-        sr.setStatus(RequestStatus.PENDING);
-        sr.setTechnicianId(null);
-        sr.setTechnicianName(null);
-        sr.setHourlyRate(null);
-        sr.setEstimatedHours(null);
-        sr.setApplianceCharge(null);
-        sr.setTotalAmount(null);
-        sr.setQuoteNote(null);
-        sr.setQuotedAt(null);
-        sr.setApprovedAt(null);
-        sr.setBroadcastedAt(LocalDateTime.now());
-        updateTechnicianAvailability(rejectedTechnicianId, "AVAILABLE");
-        logAction(requestId, rejectedTechnicianId, "QUOTE_REJECTED", "User rejected quote");
+        updateTechnicianAvailability(technicianId, "AVAILABLE");
+
+        List<com.rapidfix.dispatch.entity.Quote> activeQuotes = quoteRepo.findByRequestId(requestId).stream()
+                .filter(quote -> quote.getStatus() == com.rapidfix.dispatch.entity.QuoteStatus.PENDING)
+                .toList();
+
+        if (activeQuotes.isEmpty()) {
+            sr.setStatus(RequestStatus.PENDING);
+            sr.setTechnicianId(null);
+            sr.setTechnicianName(null);
+            sr.setHourlyRate(null);
+            sr.setEstimatedHours(null);
+            sr.setApplianceCharge(null);
+            sr.setTotalAmount(null);
+            sr.setQuoteNote(null);
+            sr.setQuotedAt(null);
+            sr.setApprovedAt(null);
+            sr.setBroadcastedAt(LocalDateTime.now());
+        }
+
+        logAction(requestId, technicianId, "QUOTE_REJECTED", "User rejected quote");
         log.info("Quote rejected for request {}. Back to PENDING.", requestId);
         return mapper.toResponse(requestRepo.save(sr));
     }
@@ -378,30 +434,46 @@ public class DispatchServiceImpl implements DispatchService {
         log.info("Technician {} withdrawing quote for request {}", technicianId, requestId);
         ServiceRequest sr = findById(requestId);
 
-        if (sr.getStatus() != RequestStatus.QUOTED)
+        if (sr.getStatus() != RequestStatus.PENDING && sr.getStatus() != RequestStatus.QUOTED)
             throw new InvalidStateException("Quote already acted upon");
 
-        if (!sr.getTechnicianId().equals(technicianId))
-            throw new InvalidStateException("This is not your quote");
-
-        sr.setStatus(RequestStatus.PENDING);
-        sr.setTechnicianId(null);
-        sr.setTechnicianName(null);
-        sr.setHourlyRate(null);
-        sr.setEstimatedHours(null);
-        sr.setApplianceCharge(null);
-        sr.setTravelCharge(null);
-        sr.setTotalAmount(null);
-        sr.setQuoteNote(null);
-        sr.setQuotedAt(null);
-        sr.setTechnicianPhone(null);
-        sr.setBroadcastedAt(LocalDateTime.now()); // ← makes it visible to others again
+        com.rapidfix.dispatch.entity.Quote q = quoteRepo.findByRequestIdAndTechnicianId(requestId, technicianId)
+                .orElseThrow(() -> new InvalidStateException("This is not your quote"));
+        q.setStatus(com.rapidfix.dispatch.entity.QuoteStatus.WITHDRAWN);
+        quoteRepo.save(q);
 
         updateTechnicianAvailability(technicianId, "AVAILABLE");
-        logAction(requestId, technicianId, "QUOTE_WITHDRAWN", "Technician withdrew quote after timeout");
 
+        // If all active quotes are withdrawn/rejected, revert request to PENDING
+        List<com.rapidfix.dispatch.entity.Quote> activeQuotes = quoteRepo.findByRequestId(requestId).stream()
+                .filter(quote -> quote.getStatus() == com.rapidfix.dispatch.entity.QuoteStatus.PENDING)
+                .toList();
+
+        if (activeQuotes.isEmpty()) {
+            sr.setStatus(RequestStatus.PENDING);
+            sr.setTechnicianId(null);
+            sr.setTechnicianName(null);
+            sr.setHourlyRate(null);
+            sr.setEstimatedHours(null);
+            sr.setApplianceCharge(null);
+            sr.setTravelCharge(null);
+            sr.setTotalAmount(null);
+            sr.setQuoteNote(null);
+            sr.setQuotedAt(null);
+            sr.setTechnicianPhone(null);
+            sr.setBroadcastedAt(LocalDateTime.now());
+        }
+
+        logAction(requestId, technicianId, "QUOTE_WITHDRAWN", "Technician withdrew quote after timeout");
         log.info("Quote withdrawn for request {}. Back to PENDING.", requestId);
         return mapper.toResponse(requestRepo.save(sr));
+    }
+
+    @Override
+    public List<QuoteResponse> getQuotesForRequest(Long requestId) {
+        return quoteRepo.findByRequestId(requestId).stream()
+                .map(mapper::toQuoteResponse)
+                .toList();
     }
     private void sendEmailToTechnician(Long userId, ServiceRequest sr, boolean isAutoAssigned) {
         String email = fetchTechnicianEmail(userId);

@@ -16,4 +16,10 @@ public interface ServiceRequestRepository extends JpaRepository<ServiceRequest, 
     long countPendingByUser(@Param("userId") Long userId);
     Page<ServiceRequest> findByStatusAndServiceType(
             RequestStatus status, ServiceType serviceType, Pageable pageable);
+
+    @Query("SELECT r FROM ServiceRequest r WHERE (r.status = com.rapidfix.dispatch.entity.RequestStatus.PENDING OR r.status = com.rapidfix.dispatch.entity.RequestStatus.QUOTED) AND r.serviceType = :serviceType AND r.id NOT IN (SELECT q.requestId FROM Quote q WHERE q.technicianId = :technicianId)")
+    Page<ServiceRequest> findAvailableRequestsForTechnician(
+            @Param("serviceType") ServiceType serviceType,
+            @Param("technicianId") Long technicianId,
+            Pageable pageable);
 }

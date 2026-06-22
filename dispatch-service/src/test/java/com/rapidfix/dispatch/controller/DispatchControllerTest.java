@@ -133,7 +133,7 @@ class DispatchControllerTest {
         when(dispatchService.getRequestById(1L))
                 .thenReturn(buildResponse(RequestStatus.PENDING));
 
-        mockMvc.perform(get("/api/requests/1"))
+        mockMvc.perform(get("/api/requests/1").header("Authorization", "Bearer mock-token"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1L));
     }
@@ -143,7 +143,7 @@ class DispatchControllerTest {
         when(dispatchService.getRequestById(99L))
                 .thenThrow(new ResourceNotFoundException("Request not found"));
 
-        mockMvc.perform(get("/api/requests/99"))
+        mockMvc.perform(get("/api/requests/99").header("Authorization", "Bearer mock-token"))
                 .andExpect(status().isNotFound());
     }
 
@@ -155,9 +155,10 @@ class DispatchControllerTest {
                 .content(List.of(buildResponse(RequestStatus.PENDING)))
                 .page(0).size(10).totalElements(1).totalPages(1).last(true)
                 .build();
+        when(jwtUtil.extractUserId(any())).thenReturn(10L);
         when(dispatchService.getRequestsByUser(eq(10L), any())).thenReturn(paged);
 
-        mockMvc.perform(get("/api/requests/user/10"))
+        mockMvc.perform(get("/api/requests/my-requests").header("Authorization", "Bearer mock-token"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].status").value("PENDING"))
                 .andExpect(jsonPath("$.totalElements").value(1));
@@ -171,9 +172,10 @@ class DispatchControllerTest {
                 .content(List.of(buildResponse(RequestStatus.QUOTED)))
                 .page(0).size(10).totalElements(1).totalPages(1).last(true)
                 .build();
+        when(jwtUtil.extractUserId(any())).thenReturn(5L);
         when(dispatchService.getRequestsByTechnician(eq(5L), any())).thenReturn(paged);
 
-        mockMvc.perform(get("/api/requests/technician/5"))
+        mockMvc.perform(get("/api/requests/my-jobs").header("Authorization", "Bearer mock-token"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].status").value("QUOTED"));
     }
@@ -213,20 +215,24 @@ class DispatchControllerTest {
 
     @Test
     void approveQuote_returns200() throws Exception {
-        when(dispatchService.approveQuote(1L))
+        when(dispatchService.approveQuote(eq(1L), eq(20L)))
                 .thenReturn(buildResponse(RequestStatus.APPROVED));
 
-        mockMvc.perform(post("/api/requests/1/approve-quote"))
+        mockMvc.perform(post("/api/requests/1/approve-quote")
+                        .header("Authorization", "Bearer mock-token")
+                        .param("technicianId", "20"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("APPROVED"));
     }
 
     @Test
     void approveQuote_notQuoted_returns409() throws Exception {
-        when(dispatchService.approveQuote(1L))
+        when(dispatchService.approveQuote(eq(1L), eq(20L)))
                 .thenThrow(new InvalidStateException("Request is not QUOTED"));
 
-        mockMvc.perform(post("/api/requests/1/approve-quote"))
+        mockMvc.perform(post("/api/requests/1/approve-quote")
+                        .header("Authorization", "Bearer mock-token")
+                        .param("technicianId", "20"))
                 .andExpect(status().isConflict());
     }
 
@@ -234,10 +240,12 @@ class DispatchControllerTest {
 
     @Test
     void rejectQuote_returns200() throws Exception {
-        when(dispatchService.rejectQuote(1L))
+        when(dispatchService.rejectQuote(eq(1L), eq(20L)))
                 .thenReturn(buildResponse(RequestStatus.PENDING));
 
-        mockMvc.perform(post("/api/requests/1/reject-quote"))
+        mockMvc.perform(post("/api/requests/1/reject-quote")
+                        .header("Authorization", "Bearer mock-token")
+                        .param("technicianId", "20"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("PENDING"));
     }
@@ -246,22 +254,24 @@ class DispatchControllerTest {
 
     @Test
     void withdrawQuote_returns200() throws Exception {
+        when(jwtUtil.extractUserId(any())).thenReturn(5L);
         when(dispatchService.withdrawQuote(1L, 5L))
                 .thenReturn(buildResponse(RequestStatus.PENDING));
 
         mockMvc.perform(patch("/api/requests/1/withdraw-quote")
-                        .param("technicianId", "5"))
+                        .header("Authorization", "Bearer mock-token"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("PENDING"));
     }
 
     @Test
     void withdrawQuote_wrongTechnician_returns409() throws Exception {
+        when(jwtUtil.extractUserId(any())).thenReturn(99L);
         when(dispatchService.withdrawQuote(1L, 99L))
                 .thenThrow(new InvalidStateException("This is not your quote"));
 
         mockMvc.perform(patch("/api/requests/1/withdraw-quote")
-                        .param("technicianId", "99"))
+                        .header("Authorization", "Bearer mock-token"))
                 .andExpect(status().isConflict());
     }
 
@@ -272,7 +282,7 @@ class DispatchControllerTest {
         when(dispatchService.markInProgress(1L))
                 .thenReturn(buildResponse(RequestStatus.IN_PROGRESS));
 
-        mockMvc.perform(patch("/api/requests/1/in-progress"))
+        mockMvc.perform(patch("/api/requests/1/in-progress").header("Authorization", "Bearer mock-token"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("IN_PROGRESS"));
     }
@@ -282,7 +292,7 @@ class DispatchControllerTest {
         when(dispatchService.markInProgress(1L))
                 .thenThrow(new InvalidStateException("Request is not APPROVED"));
 
-        mockMvc.perform(patch("/api/requests/1/in-progress"))
+        mockMvc.perform(patch("/api/requests/1/in-progress").header("Authorization", "Bearer mock-token"))
                 .andExpect(status().isConflict());
     }
 
@@ -294,6 +304,7 @@ class DispatchControllerTest {
                 .thenReturn(buildResponse(RequestStatus.COMPLETED));
 
         mockMvc.perform(patch("/api/requests/1/complete")
+                        .header("Authorization", "Bearer mock-token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(buildCompletionRequest())))
                 .andExpect(status().isOk())
@@ -308,6 +319,7 @@ class DispatchControllerTest {
                 .build();
 
         mockMvc.perform(patch("/api/requests/1/complete")
+                        .header("Authorization", "Bearer mock-token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(bad)))
                 .andExpect(status().isBadRequest());
@@ -320,7 +332,7 @@ class DispatchControllerTest {
         when(dispatchService.cancelRequest(1L))
                 .thenReturn(buildResponse(RequestStatus.CANCELLED));
 
-        mockMvc.perform(patch("/api/requests/1/cancel"))
+        mockMvc.perform(patch("/api/requests/1/cancel").header("Authorization", "Bearer mock-token"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("CANCELLED"));
     }
@@ -330,7 +342,7 @@ class DispatchControllerTest {
         when(dispatchService.cancelRequest(1L))
                 .thenThrow(new InvalidStateException("Cannot cancel COMPLETED request"));
 
-        mockMvc.perform(patch("/api/requests/1/cancel"))
+        mockMvc.perform(patch("/api/requests/1/cancel").header("Authorization", "Bearer mock-token"))
                 .andExpect(status().isConflict());
     }
 
@@ -342,7 +354,7 @@ class DispatchControllerTest {
         rated.setRated(true);
         when(dispatchService.markAsRated(1L)).thenReturn(rated);
 
-        mockMvc.perform(patch("/api/requests/1/mark-rated"))
+        mockMvc.perform(patch("/api/requests/1/mark-rated").header("Authorization", "Bearer mock-token"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.rated").value(true));
     }
@@ -355,9 +367,10 @@ class DispatchControllerTest {
                 .content(List.of(buildResponse(RequestStatus.PENDING)))
                 .page(0).size(10).totalElements(1).totalPages(1).last(true)
                 .build();
-        when(dispatchService.getAvailableRequestsByServiceType(any(), any())).thenReturn(paged);
+        when(dispatchService.getAvailableRequestsByServiceType(any(), any(), any())).thenReturn(paged);
 
         mockMvc.perform(get("/api/requests/available")
+                        .header("Authorization", "Bearer mock-token")
                         .param("serviceType", "ELECTRICIAN"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].status").value("PENDING"));

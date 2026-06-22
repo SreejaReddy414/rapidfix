@@ -133,7 +133,7 @@ class TechnicianControllerTest {
     void getByUserId_returns200() throws Exception {
         when(service.getTechnicianByUserId(10L)).thenReturn(buildResponse());
 
-        mockMvc.perform(get("/api/technicians/user/10"))
+        mockMvc.perform(get("/api/technicians/user/10").header("Authorization", "Bearer mock-token"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.userId").value(10L));
     }
@@ -143,7 +143,7 @@ class TechnicianControllerTest {
         when(service.getTechnicianByUserId(99L))
                 .thenThrow(new ResourceNotFoundException("Not found"));
 
-        mockMvc.perform(get("/api/technicians/user/99"))
+        mockMvc.perform(get("/api/technicians/user/99").header("Authorization", "Bearer mock-token"))
                 .andExpect(status().isNotFound());
     }
 
@@ -155,6 +155,7 @@ class TechnicianControllerTest {
         when(service.updateAvailability(1L, AvailabilityStatus.AVAILABLE)).thenReturn(res);
 
         mockMvc.perform(patch("/api/technicians/1/availability")
+                        .header("Authorization", "Bearer mock-token")
                         .param("status", "AVAILABLE"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.availabilityStatus").value("AVAILABLE"));
@@ -167,6 +168,7 @@ class TechnicianControllerTest {
         when(service.updateAvailability(1L, AvailabilityStatus.BUSY)).thenReturn(res);
 
         mockMvc.perform(patch("/api/technicians/1/availability")
+                        .header("Authorization", "Bearer mock-token")
                         .param("status", "BUSY"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.availabilityStatus").value("BUSY"));
@@ -181,6 +183,7 @@ class TechnicianControllerTest {
         when(service.updateLocation(eq(1L), any())).thenReturn(buildResponse());
 
         mockMvc.perform(patch("/api/technicians/1/location")
+                        .header("Authorization", "Bearer mock-token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isOk());
@@ -191,9 +194,26 @@ class TechnicianControllerTest {
         LocationUpdateRequest bad = new LocationUpdateRequest(null, 78.486);
 
         mockMvc.perform(patch("/api/technicians/1/location")
+                        .header("Authorization", "Bearer mock-token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(bad)))
                 .andExpect(status().isBadRequest());
+    }
+
+    // ── updateProfile tests ───────────────────────────────────
+
+    @Test
+    @WithMockUser(roles = "TECHNICIAN")
+    void updateProfile_returns200() throws Exception {
+        TechnicianProfileUpdateRequest req = new TechnicianProfileUpdateRequest("9999999999", Set.of(ServiceType.PLUMBER));
+        when(jwtUtil.extractUserId(any())).thenReturn(10L);
+        when(service.updateProfile(eq(10L), any())).thenReturn(buildResponse());
+
+        mockMvc.perform(put("/api/technicians/profile")
+                        .header("Authorization", "Bearer mock-token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk());
     }
 
     // ── rating tests ──────────────────────────────────────────

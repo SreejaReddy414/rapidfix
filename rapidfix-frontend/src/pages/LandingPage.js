@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Zap, Clock, Shield, MapPin, Star, ChevronRight, Wrench, Droplets, Wind, Paintbrush, Plug, Bug, Hammer, ArrowRight, Sun, Moon } from 'lucide-react';
+import { Zap, Clock, Shield, MapPin, Star, ChevronRight, Wrench, Droplets, Wind, Paintbrush, Plug, Bug, Hammer, ArrowRight, Sun, Moon, Scissors, Wifi, Sparkles, Heart, Users } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 // ─── CONSTANTS ────────────────────────────────────────────────
 const SERVICES = [
@@ -12,20 +13,25 @@ const SERVICES = [
     { icon: Wrench,     label: 'Appliance Repair',desc: 'Washing machine, fridge, AC', color: '#ff6b2b' },
     { icon: Plug,       label: 'Cleaner',        desc: 'Deep clean, regular service', color: '#1abc9c' },
     { icon: Bug,        label: 'Pest Control',   desc: 'Insects, rodents, termites', color: '#e74c3c' },
+    { icon: Scissors,   label: 'Tailoring',      desc: 'Alterations & stitching',   color: '#ec4899' },
+    { icon: Wifi,       label: 'Networking Tech',desc: 'Router & Wi-Fi configuration',color: '#14b8a6' },
+    { icon: Sparkles,   label: 'Beautician',     desc: 'Salon & grooming at home',  color: '#d946ef' },
+    { icon: Heart,      label: 'Mehandi Artist', desc: 'Beautiful henna designs',   color: '#84cc16' },
+    { icon: Users,      label: 'General Helper', desc: 'Shifting & heavy lifting support',color: '#6366f1' },
 ];
 
 const STATS = [
     { value: '50K+', label: 'Jobs Completed' },
     { value: '4.9★', label: 'Avg. Rating' },
     { value: '15min', label: 'Avg. Response' },
-    { value: '2000+', label: 'Technicians' },
+    { value: '2000+', label: 'Service Pros' },
 ];
 
 const HOW_IT_WORKS = [
-    { step: '01', title: 'Describe your problem', desc: 'Tell us what needs fixing — electrical, plumbing, AC, and more.' },
-    { step: '02', title: 'Get matched instantly', desc: 'Our system finds the nearest available verified technician.' },
-    { step: '03', title: 'Track in real time', desc: 'Watch your technician en-route. Live map, live updates.' },
-    { step: '04', title: 'Problem solved', desc: 'Rate your experience and pay — all in the app.' },
+    { step: '01', title: 'Describe your service', desc: 'Tell us what you need — tailoring, beauty, repairs, and more.' },
+    { step: '02', title: 'Get matched instantly', desc: 'Our system finds the nearest available verified professional.' },
+    { step: '03', title: 'Track in real time', desc: 'Watch your service provider en-route. Live map, live updates.' },
+    { step: '04', title: 'Service completed', desc: 'Rate your experience and pay — all in the app.' },
 ];
 
 const REVIEWS = [
@@ -63,6 +69,17 @@ function NoiseOverlay() {
 
 // ─── HERO SECTION ─────────────────────────────────────────────
 function Hero({ onGetStarted }) {
+    const { isLoggedIn, user } = useAuth();
+    const navigate = useNavigate();
+
+    const handleAction = () => {
+        if (isLoggedIn) {
+            navigate(user?.role === 'TECHNICIAN' ? '/technician/dashboard' : '/user/dashboard');
+        } else {
+            onGetStarted();
+        }
+    };
+
     return (
         <section style={{
             position: 'relative', minHeight: '100vh', display: 'flex', alignItems: 'center',
@@ -104,9 +121,9 @@ function Hero({ onGetStarted }) {
                             lineHeight: 1.05, letterSpacing: '-2px', marginBottom: '24px',
                             animation: 'fadeUp 0.5s 0.1s ease both',
                         }}>
-                            Home repairs,<br />
+                            Home services,<br />
                             <span style={{ color: 'var(--accent)', position: 'relative' }}>
-                fixed fast.
+                done fast.
                 <svg style={{ position: 'absolute', bottom: -4, left: 0, width: '100%' }} viewBox="0 0 300 12" preserveAspectRatio="none">
                   <path d="M0 10 Q75 2 150 10 Q225 18 300 10" stroke="var(--accent)" strokeWidth="3" fill="none" opacity="0.4" />
                 </svg>
@@ -117,11 +134,11 @@ function Hero({ onGetStarted }) {
                             fontSize: '18px', color: 'var(--text2)', lineHeight: 1.7, maxWidth: '480px',
                             marginBottom: '40px', animation: 'fadeUp 0.5s 0.2s ease both',
                         }}>
-                            On-demand electricians, plumbers, AC technicians and more — verified pros at your door in under 30 minutes.
+                            On-demand services — from tailoring and grooming to plumbing and repairs. Verified pros at your door in under 30 minutes.
                         </p>
 
                         <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', animation: 'fadeUp 0.5s 0.3s ease both' }}>
-                            <button onClick={onGetStarted} style={{
+                            <button onClick={handleAction} style={{
                                 display: 'inline-flex', alignItems: 'center', gap: '10px',
                                 padding: '15px 32px', borderRadius: '12px',
                                 background: 'var(--accent)', color: '#fff', border: 'none',
@@ -131,7 +148,7 @@ function Hero({ onGetStarted }) {
                             }}
                                     onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 12px 40px rgba(255,107,43,0.45)'; }}
                                     onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 8px 32px rgba(255,107,43,0.35)'; }}>
-                                Book a Technician <ArrowRight size={18} />
+                                {isLoggedIn ? 'Go to Dashboard' : 'Book a Service'} <ArrowRight size={18} />
                             </button>
 
                             <a href="#how-it-works" style={{
@@ -227,7 +244,7 @@ function LiveJobCard() {
             {/* Progress */}
             <div style={{ marginBottom: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px' }}>
-                    <span style={{ color: 'var(--text2)' }}>Technician approaching</span>
+                    <span style={{ color: 'var(--text2)' }}>Service pro approaching</span>
                     <span style={{ color: 'var(--accent)', fontWeight: 600 }}>{progress}%</span>
                 </div>
                 <div style={{ height: 6, background: 'var(--bg3)', borderRadius: '100px', overflow: 'hidden' }}>
@@ -265,6 +282,17 @@ function StatsBar() {
 // ─── SERVICES ─────────────────────────────────────────────────
 function Services({ onGetStarted }) {
     const [hovered, setHovered] = useState(null);
+    const { isLoggedIn, user } = useAuth();
+    const navigate = useNavigate();
+
+    const handleAction = () => {
+        if (isLoggedIn) {
+            navigate(user?.role === 'TECHNICIAN' ? '/technician/dashboard' : '/user/dashboard');
+        } else {
+            onGetStarted();
+        }
+    };
+
     return (
         <section style={{ padding: '96px 24px', background: 'var(--bg)' }}>
             <div style={{ maxWidth: 1200, margin: '0 auto' }}>
@@ -283,7 +311,7 @@ function Services({ onGetStarted }) {
                         <div key={label}
                              onMouseEnter={() => setHovered(label)}
                              onMouseLeave={() => setHovered(null)}
-                             onClick={onGetStarted}
+                             onClick={handleAction}
                              style={{
                                  padding: '28px 24px', borderRadius: '16px', cursor: 'pointer',
                                  background: hovered === label ? 'var(--bg3)' : 'var(--bg2)',
@@ -303,7 +331,7 @@ function Services({ onGetStarted }) {
                             <div style={{ fontSize: '13px', color: 'var(--text2)', lineHeight: 1.5 }}>{desc}</div>
                             {hovered === label && (
                                 <div style={{ marginTop: '14px', display: 'flex', alignItems: 'center', gap: '5px', fontSize: '13px', color: 'var(--accent)', fontWeight: 500 }}>
-                                    Book now <ChevronRight size={13} />
+                                    {isLoggedIn ? 'Go to Dashboard' : 'Book now'} <ChevronRight size={13} />
                                 </div>
                             )}
                         </div>
@@ -386,6 +414,17 @@ function Reviews() {
 
 // ─── CTA ──────────────────────────────────────────────────────
 function CTA({ onGetStarted }) {
+    const { isLoggedIn, user } = useAuth();
+    const navigate = useNavigate();
+
+    const handleAction = () => {
+        if (isLoggedIn) {
+            navigate(user?.role === 'TECHNICIAN' ? '/technician/dashboard' : '/user/dashboard');
+        } else {
+            onGetStarted();
+        }
+    };
+
     return (
         <section style={{
             padding: '96px 24px', position: 'relative', overflow: 'hidden',
@@ -402,13 +441,13 @@ function CTA({ onGetStarted }) {
                     <Zap size={36} color="#fff" fill="#fff" />
                 </div>
                 <h2 style={{ fontFamily: 'var(--font-head)', fontSize: 'clamp(36px, 5vw, 64px)', fontWeight: 900, letterSpacing: '-2px', marginBottom: '16px' }}>
-                    Something broken?
+                    Need a service?
                 </h2>
                 <p style={{ fontSize: '18px', color: 'var(--text2)', marginBottom: '40px', lineHeight: 1.7 }}>
-                    Join homeowners who trust RapidFix for fast, reliable repairs.
+                    Join thousands who trust RapidFix for fast, reliable home services.
                 </p>
                 <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                    <button onClick={onGetStarted} style={{
+                    <button onClick={handleAction} style={{
                         display: 'inline-flex', alignItems: 'center', gap: '10px',
                         padding: '16px 36px', borderRadius: '12px',
                         background: 'var(--accent)', color: '#fff', border: 'none',
@@ -418,20 +457,22 @@ function CTA({ onGetStarted }) {
                     }}
                             onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
                             onMouseLeave={e => e.currentTarget.style.transform = 'none'}>
-                        Get Started Free <ArrowRight size={18} />
+                        {isLoggedIn ? 'Go to Dashboard' : 'Get Started Free'} <ArrowRight size={18} />
                     </button>
-                    <button onClick={() => window.location.href = '/login'} style={{
-                        display: 'inline-flex', alignItems: 'center', gap: '8px',
-                        padding: '16px 32px', borderRadius: '12px',
-                        background: 'transparent', color: 'var(--text)',
-                        border: '1px solid var(--border)', cursor: 'pointer',
-                        fontFamily: 'var(--font)', fontSize: '17px', fontWeight: 500,
-                        transition: 'all 0.2s ease',
-                    }}
-                            onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--border2)'}
-                            onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}>
-                        Sign In
-                    </button>
+                    {!isLoggedIn && (
+                        <button onClick={() => navigate('/login')} style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '8px',
+                            padding: '16px 32px', borderRadius: '12px',
+                            background: 'transparent', color: 'var(--text)',
+                            border: '1px solid var(--border)', cursor: 'pointer',
+                            fontFamily: 'var(--font)', fontSize: '17px', fontWeight: 500,
+                            transition: 'all 0.2s ease',
+                        }}
+                                onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--border2)'}
+                                onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}>
+                            Sign In
+                        </button>
+                    )}
                 </div>
             </div>
         </section>
@@ -454,6 +495,9 @@ function SectionLabel({ text }) {
 // ─── NAVBAR (Landing) ─────────────────────────────────────────
 function LandingNav({ onGetStarted }) {
     const [scrolled, setScrolled] = useState(false);
+    const { isLoggedIn, user } = useAuth();
+    const navigate = useNavigate();
+
     useEffect(() => {
         const fn = () => setScrolled(window.scrollY > 20);
         window.addEventListener('scroll', fn);
@@ -461,7 +505,7 @@ function LandingNav({ onGetStarted }) {
     }, []);
 
     const [theme, setTheme] = useState(() => {
-        return localStorage.getItem('rapidfix-theme') || 'dark';
+        return localStorage.getItem('rapidfix-theme') || 'light';
     });
 
     useEffect(() => {
@@ -521,24 +565,40 @@ function LandingNav({ onGetStarted }) {
                     {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
                 </button>
 
-                <a href="/login" style={{
-                    padding: '8px 18px', borderRadius: '9px', textDecoration: 'none',
-                    color: 'var(--text2)', fontSize: '14px', fontWeight: 500,
-                    border: '1px solid var(--border)', transition: 'all 0.2s',
-                    fontFamily: 'var(--font)',
-                }}
-                   onMouseEnter={e => e.currentTarget.style.color = 'var(--text)'}
-                   onMouseLeave={e => e.currentTarget.style.color = 'var(--text2)'}>Sign in</a>
+                {isLoggedIn ? (
+                    <button onClick={() => navigate(user?.role === 'TECHNICIAN' ? '/technician/dashboard' : '/user/dashboard')} style={{
+                        padding: '8px 20px', borderRadius: '9px',
+                        background: 'var(--accent)', color: '#fff',
+                        border: 'none', fontSize: '14px', fontWeight: 600,
+                        cursor: 'pointer', fontFamily: 'var(--font)',
+                        transition: 'all 0.2s',
+                    }}
+                            onMouseEnter={e => e.currentTarget.style.opacity = '0.9'}
+                            onMouseLeave={e => e.currentTarget.style.opacity = '1'}>
+                        Dashboard
+                    </button>
+                ) : (
+                    <>
+                        <a href="/login" style={{
+                            padding: '8px 18px', borderRadius: '9px', textDecoration: 'none',
+                            color: 'var(--text2)', fontSize: '14px', fontWeight: 500,
+                            border: '1px solid var(--border)', transition: 'all 0.2s',
+                            fontFamily: 'var(--font)',
+                        }}
+                           onMouseEnter={e => e.currentTarget.style.color = 'var(--text)'}
+                           onMouseLeave={e => e.currentTarget.style.color = 'var(--text2)'}>Sign in</a>
 
-                <button onClick={onGetStarted} style={{
-                    padding: '8px 20px', borderRadius: '9px',
-                    background: 'var(--accent)', color: '#fff',
-                    border: 'none', fontSize: '14px', fontWeight: 600,
-                    cursor: 'pointer', fontFamily: 'var(--font)',
-                    transition: 'all 0.2s',
-                }}
-                        onMouseEnter={e => e.currentTarget.style.opacity = '0.9'}
-                        onMouseLeave={e => e.currentTarget.style.opacity = '1'}>Get Started</button>
+                        <button onClick={onGetStarted} style={{
+                            padding: '8px 20px', borderRadius: '9px',
+                            background: 'var(--accent)', color: '#fff',
+                            border: 'none', fontSize: '14px', fontWeight: 600,
+                            cursor: 'pointer', fontFamily: 'var(--font)',
+                            transition: 'all 0.2s',
+                        }}
+                                onMouseEnter={e => e.currentTarget.style.opacity = '0.9'}
+                                onMouseLeave={e => e.currentTarget.style.opacity = '1'}>Get Started</button>
+                    </>
+                )}
             </div>
         </nav>
     );
