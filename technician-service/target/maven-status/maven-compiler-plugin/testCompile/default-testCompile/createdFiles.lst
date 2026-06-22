@@ -3,6 +3,7 @@ com\rapidfix\technician\service\impl\TechnicianServiceImplTest$RegisterTests.cla
 com\rapidfix\technician\security\JwtAuthFilterTest$ContextIsolationTests.class
 com\rapidfix\technician\security\JwtUtilTest$ExtractUserIdTests.class
 com\rapidfix\technician\security\JwtAuthFilterTest$ValidTokenTests.class
+com\rapidfix\technician\service\impl\TechnicianServiceImplTest$UpdateProfileTests.class
 com\rapidfix\technician\security\JwtUtilTest$ExtractEmailTests.class
 com\rapidfix\technician\service\impl\TechnicianServiceImplTest$DeleteTests.class
 com\rapidfix\technician\service\impl\TechnicianServiceImplTest.class

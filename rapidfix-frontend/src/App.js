@@ -4,7 +4,8 @@ import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LoginPage, RegisterPage } from './pages/Auth';
 import { UserDashboard, NewRequestPage, UserRequestsPage } from './pages/UserPages';
-import { TechnicianDashboard, BrowseJobsPage, MyJobsPage } from './pages/TechnicianPages';
+import { TechnicianDashboard, BrowseJobsPage, MyJobsPage, TechnicianEarningsPage } from './pages/TechnicianPages';
+import { AdminDashboard } from './pages/AdminPages';
 import LandingPage from './pages/LandingPage';
 import './index.css';
 
@@ -18,11 +19,6 @@ function ProtectedRoute({ children, allowedRole }) {
 }
 
 function RootRedirect() {
-    const { isLoggedIn, user } = useAuth();
-    // If logged in, go to dashboard; otherwise show landing page
-    if (isLoggedIn) {
-        return <Navigate to={user?.role === 'TECHNICIAN' ? '/technician/dashboard' : '/user/dashboard'} replace />;
-    }
     return <LandingPage />;
 }
 
@@ -43,6 +39,10 @@ function AppRoutes() {
             <Route path="/technician/dashboard" element={<ProtectedRoute allowedRole="TECHNICIAN"><TechnicianDashboard /></ProtectedRoute>} />
             <Route path="/technician/jobs" element={<ProtectedRoute allowedRole="TECHNICIAN"><BrowseJobsPage /></ProtectedRoute>} />
             <Route path="/technician/my-jobs" element={<ProtectedRoute allowedRole="TECHNICIAN"><MyJobsPage /></ProtectedRoute>} />
+            <Route path="/technician/earnings" element={<ProtectedRoute allowedRole="TECHNICIAN"><TechnicianEarningsPage /></ProtectedRoute>} />
+
+            {/* Admin routes */}
+            <Route path="/admin" element={<AdminDashboard />} />
 
             <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

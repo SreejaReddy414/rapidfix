@@ -11,6 +11,7 @@ com\rapidfix\dispatch\dto\NearbyTechnicianDto$NearbyTechnicianDtoBuilder.class
 com\rapidfix\dispatch\dto\ServiceRequestCreate.class
 com\rapidfix\dispatch\exception\InvalidStateException.class
 com\rapidfix\dispatch\config\swagger\SwaggerConfig.class
+com\rapidfix\dispatch\entity\Quote.class
 com\rapidfix\dispatch\dto\ServiceRequestCreate$ServiceRequestCreateBuilder.class
 com\rapidfix\dispatch\client\TechnicianServiceClient$1.class
 com\rapidfix\dispatch\security\JwtAuthFilter.class
@@ -23,6 +24,8 @@ com\rapidfix\dispatch\entity\ServiceRequest$ServiceRequestBuilder.class
 com\rapidfix\dispatch\entity\DispatchLog.class
 com\rapidfix\dispatch\dto\NearbyTechnicianDto.class
 com\rapidfix\dispatch\client\TechnicianServiceClient.class
+com\rapidfix\dispatch\dto\QuoteResponse.class
+com\rapidfix\dispatch\dto\QuoteResponse$QuoteResponseBuilder.class
 com\rapidfix\dispatch\exception\GlobalExceptionHandler$ErrorResponse.class
 com\rapidfix\dispatch\config\security\SecurityConfig.class
 com\rapidfix\dispatch\dto\ServiceRequestResponse.class
@@ -30,13 +33,16 @@ com\rapidfix\dispatch\DispatchServiceApplication.class
 com\rapidfix\dispatch\util\MessageService.class
 com\rapidfix\dispatch\config\WebSocketConfig.class
 com\rapidfix\dispatch\repository\ChatMessageRepository.class
+com\rapidfix\dispatch\entity\Quote$QuoteBuilder.class
 com\rapidfix\dispatch\mapper\ServiceRequestMapper.class
 com\rapidfix\dispatch\dto\ChatMessageDto.class
 com\rapidfix\dispatch\entity\ChatMessage$ChatMessageBuilder.class
 com\rapidfix\dispatch\dto\ChatMessageDto$ChatMessageDtoBuilder.class
+com\rapidfix\dispatch\repository\QuoteRepository.class
 com\rapidfix\dispatch\dto\QuoteRequest.class
 com\rapidfix\dispatch\entity\ChatMessage.class
 com\rapidfix\dispatch\service\impl\DispatchServiceImpl.class
+com\rapidfix\dispatch\entity\QuoteStatus.class
 com\rapidfix\dispatch\dto\PagedResponse.class
 com\rapidfix\dispatch\security\JwtUtil.class
 com\rapidfix\dispatch\controller\ChatController.class

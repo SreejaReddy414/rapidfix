@@ -263,6 +263,33 @@ class TechnicianServiceImplTest {
     }
 
     // ══════════════════════════════════════════════════════════
+    // UPDATE PROFILE TESTS
+    // ══════════════════════════════════════════════════════════
+
+    @Nested
+    @DisplayName("updateProfile()")
+    class UpdateProfileTests {
+
+        @Test
+        @DisplayName("Should partially update phone and skills")
+        void updateProfile_success() {
+            TechnicianProfileUpdateRequest req = TechnicianProfileUpdateRequest.builder()
+                    .phone("9999999999")
+                    .serviceTypes(Set.of(ServiceType.PLUMBER))
+                    .build();
+
+            when(repo.findByUserId(10L)).thenReturn(Optional.of(technician));
+            when(repo.save(any())).thenReturn(technician);
+            when(mapper.toResponse(any())).thenReturn(techResponse);
+
+            service.updateProfile(10L, req);
+
+            verify(repo).save(argThat(t ->
+                    t.getPhone().equals("9999999999") && t.getServiceTypes().contains(ServiceType.PLUMBER)));
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════
     // RATING TESTS
     // ══════════════════════════════════════════════════════════
 

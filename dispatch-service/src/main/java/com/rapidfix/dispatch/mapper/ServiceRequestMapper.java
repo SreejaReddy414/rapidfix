@@ -32,4 +32,25 @@ public class ServiceRequestMapper {
                 .createdAt(r.getCreatedAt())
                 .build();
     }
+
+    public com.rapidfix.dispatch.dto.QuoteResponse toQuoteResponse(com.rapidfix.dispatch.entity.Quote q) {
+        if (q == null) return null;
+        return com.rapidfix.dispatch.dto.QuoteResponse.builder()
+                .id(q.getId())
+                .requestId(q.getRequestId())
+                .technicianId(q.getTechnicianId())
+                .technicianName(q.getTechnicianName())
+                .technicianPhone(q.getTechnicianPhone())
+                .hourlyRate(q.getHourlyRate())
+                .estimatedHours(q.getEstimatedHours())
+                .applianceCharge(q.getApplianceCharge())
+                .travelCharge(q.getTravelCharge())
+                .distanceKm(q.getDistanceKm())
+                .totalAmount(q.getTotalAmount())
+                .quoteNote(q.getQuoteNote())
+                .estimatedArrivalTime(q.getEstimatedArrivalTime())
+                .status(q.getStatus())
+                .createdAt(q.getCreatedAt())
+                .build();
+    }
 }

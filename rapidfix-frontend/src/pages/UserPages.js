@@ -35,7 +35,7 @@ if (typeof document !== 'undefined') {
   }
 }
 
-const SERVICE_TYPES = ['ELECTRICIAN','PLUMBER','AC_REPAIR','CARPENTER','PAINTER','CLEANER','APPLIANCE_REPAIR','PEST_CONTROL'];
+const SERVICE_TYPES = ['ELECTRICIAN','PLUMBER','AC_REPAIR','CARPENTER','PAINTER','CLEANER','APPLIANCE_REPAIR','PEST_CONTROL','TAILORING','NETWORKING_TECH','BEAUTICIAN','MEHANDI_SERVICES','GENERAL_HELPER'];
 const PAGE_SIZE = 5;
 
 // ─── SERVICE META ─────────────────────────────────────────────
@@ -48,6 +48,92 @@ const SERVICE_META = {
   CLEANER:         { icon: '🧹', color: '#10b981', bg: 'rgba(16,185,129,0.12)' },
   APPLIANCE_REPAIR:{ icon: '🔌', color: '#f97316', bg: 'rgba(249,115,22,0.12)' },
   PEST_CONTROL:    { icon: '🐛', color: '#84cc16', bg: 'rgba(132,204,22,0.12)' },
+  TAILORING:       { icon: '🪡', color: '#ec4899', bg: 'rgba(236,72,153,0.12)' },
+  NETWORKING_TECH: { icon: '📶', color: '#14b8a6', bg: 'rgba(20,184,166,0.12)' },
+  BEAUTICIAN:      { icon: '💄', color: '#d946ef', bg: 'rgba(217,70,239,0.12)' },
+  MEHANDI_SERVICES:{ icon: '🌿', color: '#84cc16', bg: 'rgba(132,204,22,0.12)' },
+  GENERAL_HELPER:  { icon: '🙋🏽‍♂️', color: '#6366f1', bg: 'rgba(99,102,241,0.12)' },
+};
+
+const SERVICE_DETAILS = {
+  ELECTRICIAN: {
+    desc: 'Certified electricians for wiring, short circuits, switchboards, lighting, and heavy appliance setups.',
+    eta: '15-30 mins',
+    price: '₹249',
+    benefits: ['Licensed & Certified', 'Equipped with safety tools', '30-day work warranty']
+  },
+  PLUMBER: {
+    desc: 'Professional plumbers for pipe leaks, tap repairs, bathroom fittings, clog removals, and drainage issues.',
+    eta: '20-40 mins',
+    price: '₹199',
+    benefits: ['Experienced Professionals', 'No hidden charges', 'High-quality replacement parts']
+  },
+  AC_REPAIR: {
+    desc: 'Expert AC technicians for servicing, gas filling, cooling issues, filter cleaning, and compressor repairs.',
+    eta: '30-60 mins',
+    price: '₹399',
+    benefits: ['Certified HVAC experts', 'Multi-brand specialization', 'Post-service cleaning included']
+  },
+  CARPENTER: {
+    desc: 'Skilled carpenters for furniture repair, assembly, door/window fixing, lock installations, and woodwork.',
+    eta: '30-50 mins',
+    price: '₹299',
+    benefits: ['Precision crafting', 'Experienced woodworkers', 'Cleanup post-completion']
+  },
+  PAINTER: {
+    desc: 'Professional painters for wall touch-ups, wall repairs, texture painting, interior painting, and consultations.',
+    eta: 'Next day start',
+    price: '₹499',
+    benefits: ['Premium quality paints', 'Mess-free execution', 'Color consultation support']
+  },
+  CLEANER: {
+    desc: 'Deep cleaning experts for home, kitchen, bathroom, sofa/carpet shampooing, and post-party cleanup.',
+    eta: '45-90 mins',
+    price: '₹349',
+    benefits: ['Eco-friendly chemicals', 'Mechanized deep cleaning', 'Thorough stain removal']
+  },
+  APPLIANCE_REPAIR: {
+    desc: 'Expert technicians for washing machines, refrigerators, microwaves, chimneys, and TV installations.',
+    eta: '25-45 mins',
+    price: '₹299',
+    benefits: ['Genuine spare parts', 'Multi-brand expertise', 'Instant diagnostics report']
+  },
+  PEST_CONTROL: {
+    desc: 'Trained specialists for cockroaches, bedbugs, termites, rodents, and general disinfection.',
+    eta: '30-60 mins',
+    price: '₹449',
+    benefits: ['Odourless & safe chemicals', 'Long-lasting protection', 'Free follow-up inspection']
+  },
+  TAILORING: {
+    desc: 'Professional tailoring for alterations, small fixes, stitch adjustments, and sewing needs right at home.',
+    eta: '30-60 mins',
+    price: '₹149',
+    benefits: ['On-demand alterations', 'Equipped with compact machines', 'Instant fitting support']
+  },
+  NETWORKING_TECH: {
+    desc: 'Router setups, Wi-Fi connectivity diagnostics, LAN cabling, configuration troubleshooting, and home network optimization.',
+    eta: '20-40 mins',
+    price: '₹299',
+    benefits: ['Instant connectivity fix', 'Router setting calibration', 'Wi-Fi dead zone analysis']
+  },
+  BEAUTICIAN: {
+    desc: 'Professional beauticians for salon services, facials, waxing, threading, makeup, and hair care at your convenience.',
+    eta: '45-90 mins',
+    price: '₹499',
+    benefits: ['Premium beauty products', 'Hygienic setups', 'Certified style experts']
+  },
+  MEHANDI_SERVICES: {
+    desc: 'Skilled Mehandi artists for bridal, festival, and traditional intricate henna patterns for all celebrations.',
+    eta: '60-120 mins',
+    price: '₹349',
+    benefits: ['100% natural henna', 'Intricate traditional designs', 'Fast & clean application']
+  },
+  GENERAL_HELPER: {
+    desc: 'Reliable helpers for house shifting support, event serving, heavy lifting, or general home assistance chores.',
+    eta: '15-30 mins',
+    price: '₹199',
+    benefits: ['Heavy lifting assistance', 'Polite & verified support', 'Multi-purpose help']
+  }
 };
 
 // ─── STATUS META ──────────────────────────────────────────────
@@ -299,8 +385,7 @@ function ReviewModal({ request, onClose, onDone }) {
   );
 }
 
-// ─── QUOTE BOX ────────────────────────────────────────────────
-function QuoteBox({ request, onApprove, onReject, approveLoading, rejectLoading }) {
+function QuoteBox({ quote, onApprove, onReject, approveLoading, rejectLoading }) {
   return (
       <div style={{
         padding: '18px', borderRadius: '14px',
@@ -316,51 +401,51 @@ function QuoteBox({ request, onApprove, onReject, approveLoading, rejectLoading 
             <FileText size={13} color="#a78bfa" />
           </div>
           <span style={{ color: '#a78bfa', fontWeight: 600, fontSize: '13px' }}>
-          Quote from {request.technicianName}
+          Quote from {quote.technicianName}
         </span>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px', marginBottom: '14px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ color: 'var(--text3)', display: 'flex', alignItems: 'center', gap: '5px' }}>
-            <Clock size={12} /> {request.estimatedHours}hrs × ₹{request.hourlyRate}/hr
+            <Clock size={12} /> {quote.estimatedHours}hrs × ₹{quote.hourlyRate}/hr
           </span>
-            <span style={{ color: 'var(--text)', fontWeight: 500 }}>₹{(request.hourlyRate * request.estimatedHours).toFixed(0)}</span>
+            <span style={{ color: 'var(--text)', fontWeight: 500 }}>₹{(quote.hourlyRate * quote.estimatedHours).toFixed(0)}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ color: 'var(--text3)' }}>Parts / Appliances</span>
-            <span style={{ color: 'var(--text)', fontWeight: 500 }}>₹{request.applianceCharge?.toFixed(0)}</span>
+            <span style={{ color: 'var(--text)', fontWeight: 500 }}>₹{quote.applianceCharge?.toFixed(0)}</span>
           </div>
-          {request.travelCharge > 0 && (
+          {quote.travelCharge > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ color: 'var(--text3)', display: 'flex', alignItems: 'center', gap: '5px' }}>
-              <Navigation2 size={12} /> Travel ({request.distanceKm?.toFixed(1)}km)
+              <Navigation2 size={12} /> Travel ({quote.distanceKm?.toFixed(1)}km)
             </span>
-                <span style={{ color: 'var(--text)', fontWeight: 500 }}>₹{request.travelCharge?.toFixed(0)}</span>
+                <span style={{ color: 'var(--text)', fontWeight: 500 }}>₹{quote.travelCharge?.toFixed(0)}</span>
               </div>
           )}
-          {request.travelCharge === 0 && request.distanceKm > 0 && (
+          {quote.travelCharge === 0 && quote.distanceKm > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ color: 'var(--text3)', display: 'flex', alignItems: 'center', gap: '5px' }}>
-              <Navigation2 size={12} /> Travel ({request.distanceKm?.toFixed(1)}km)
+              <Navigation2 size={12} /> Travel ({quote.distanceKm?.toFixed(1)}km)
             </span>
                 <span style={{ color: '#10b981', fontWeight: 600 }}>FREE</span>
               </div>
           )}
           <div style={{ borderTop: '1px solid rgba(167,139,250,0.2)', paddingTop: '8px', marginTop: '2px', display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: '15px' }}>
             <span style={{ color: 'var(--text2)' }}>Estimated Total</span>
-            <span style={{ color: '#a78bfa' }}>₹{request.totalAmount?.toFixed(0)}</span>
+            <span style={{ color: '#a78bfa' }}>₹{quote.totalAmount?.toFixed(0)}</span>
           </div>
         </div>
 
-        {request.quoteNote && (
+        {quote.quoteNote && (
             <div style={{
               padding: '10px 14px', background: 'rgba(167,139,250,0.06)',
               borderRadius: '10px', fontSize: '12px', color: 'var(--text3)',
               marginBottom: '14px', fontStyle: 'italic',
               borderLeft: '3px solid rgba(167,139,250,0.4)',
             }}>
-              "{request.quoteNote}"
+              "{quote.quoteNote}"
             </div>
         )}
 
@@ -572,8 +657,27 @@ function RequestCard({ request, onRefresh, onChatActiveChange }) {
   const [rejectLoading,  setRejectLoading]  = useState(false);
   const [showReview,     setShowReview]     = useState(false);
   const [liveDistance,   setLiveDistance]   = useState(null);
+  const [quotes,         setQuotes]         = useState([]);
+  const [quotesLoading,  setQuotesLoading]  = useState(false);
   const { user } = useAuth();
   const meta = SERVICE_META[request.serviceType] || { icon: '🔨', color: 'var(--accent)', bg: 'var(--accentbg)' };
+
+  useEffect(() => {
+    if (['PENDING', 'QUOTED'].includes(request.status)) {
+      const fetchQuotes = async () => {
+        setQuotesLoading(true);
+        try {
+          const res = await dispatchAPI.getQuotesForRequest(request.id);
+          setQuotes(res.data || []);
+        } catch (e) {
+          console.error("Failed to fetch quotes", e);
+        } finally {
+          setQuotesLoading(false);
+        }
+      };
+      fetchQuotes();
+    }
+  }, [request.id, request.status]);
 
   const cancel = async () => {
     setCancelLoading(true);
@@ -582,16 +686,16 @@ function RequestCard({ request, onRefresh, onChatActiveChange }) {
     finally { setCancelLoading(false); }
   };
 
-  const approve = async () => {
+  const approve = async (technicianId) => {
     setApproveLoading(true);
-    try { await dispatchAPI.approveQuote(request.id); toast.success('Quote approved! Technician is on the way 🚗'); onRefresh(); }
+    try { await dispatchAPI.approveQuote(request.id, technicianId); toast.success('Quote approved! Technician is on the way 🚗'); onRefresh(); }
     catch (e) { toast.error(e.response?.data?.message || 'Failed to approve'); }
     finally { setApproveLoading(false); }
   };
 
-  const reject = async () => {
+  const reject = async (technicianId) => {
     setRejectLoading(true);
-    try { await dispatchAPI.rejectQuote(request.id); toast.success('Quote rejected.'); onRefresh(); }
+    try { await dispatchAPI.rejectQuote(request.id, technicianId); toast.success('Quote rejected.'); onRefresh(); }
     catch (e) { toast.error(e.response?.data?.message || 'Failed to reject'); }
     finally { setRejectLoading(false); }
   };
@@ -756,13 +860,54 @@ function RequestCard({ request, onRefresh, onChatActiveChange }) {
                 </div>
             )}
 
-            {/* Quote box */}
-            {request.status === 'QUOTED' && (
-                <QuoteBox
-                    request={request}
-                    onApprove={approve} onReject={reject}
-                    approveLoading={approveLoading} rejectLoading={rejectLoading}
-                />
+            {/* Quotes list */}
+            {['PENDING', 'QUOTED'].includes(request.status) && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                {quotesLoading ? (
+                  <div style={{ fontSize: '13px', color: 'var(--text3)', textAlign: 'center', padding: '10px' }}>
+                    Loading quotes...
+                  </div>
+                ) : quotes.length > 0 ? (
+                  <>
+                    <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text)', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Activity size={14} color="var(--accent)" /> Technician Quotes ({quotes.length})
+                    </div>
+                    {quotes.map(q => (
+                      <QuoteBox
+                        key={q.technicianId}
+                        quote={q}
+                        onApprove={() => approve(q.technicianId)}
+                        onReject={() => reject(q.technicianId)}
+                        approveLoading={approveLoading}
+                        rejectLoading={rejectLoading}
+                      />
+                    ))}
+                  </>
+                ) : request.status === 'QUOTED' ? (
+                  <QuoteBox
+                    quote={{
+                      technicianId: request.technicianId,
+                      technicianName: request.technicianName,
+                      technicianPhone: request.technicianPhone,
+                      hourlyRate: request.hourlyRate,
+                      estimatedHours: request.estimatedHours,
+                      applianceCharge: request.applianceCharge,
+                      travelCharge: request.travelCharge,
+                      distanceKm: request.distanceKm,
+                      totalAmount: request.totalAmount,
+                      quoteNote: request.quoteNote
+                    }}
+                    onApprove={() => approve(request.technicianId)}
+                    onReject={() => reject(request.technicianId)}
+                    approveLoading={approveLoading}
+                    rejectLoading={rejectLoading}
+                  />
+                ) : (
+                  <div style={{ padding: '16px', borderRadius: '12px', background: 'var(--bg3)', border: '1px dashed var(--border)', textAlign: 'center', fontSize: '13px', color: 'var(--text3)' }}>
+                    Waiting for technicians to quote...
+                  </div>
+                )}
+              </div>
             )}
 
             {/* Cancel */}
@@ -774,6 +919,7 @@ function RequestCard({ request, onRefresh, onChatActiveChange }) {
                   fontSize: '13px', fontWeight: 600, fontFamily: 'var(--font)',
                   opacity: cancelLoading ? 0.7 : 1, transition: 'all 0.2s ease',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                  marginTop: '10px',
                 }}>
                   <XCircle size={13} /> Cancel Request
                 </button>
@@ -1037,6 +1183,16 @@ export function UserDashboard() {
 }
 
 // ─── NEW REQUEST PAGE ─────────────────────────────────────────
+function ChangeMapView({ coords }) {
+  const map = useMap();
+  useEffect(() => {
+    if (coords && coords[0] && coords[1]) {
+      map.setView(coords, 15);
+    }
+  }, [coords, map]);
+  return null;
+}
+
 export function NewRequestPage() {
   const [form, setForm] = useState({
     serviceType: 'ELECTRICIAN', description: '', address: '',
@@ -1045,6 +1201,13 @@ export function NewRequestPage() {
   const [loading,    setLoading]    = useState(false);
   const [locLoading, setLocLoading] = useState(false);
   const navigate = useNavigate();
+
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 850);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 850);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const getLocation = () => {
     if (!navigator.geolocation) { toast.error('Geolocation not supported'); return; }
@@ -1076,14 +1239,14 @@ export function NewRequestPage() {
     finally { setLoading(false); }
   };
 
-  const selectedMeta = SERVICE_META[form.serviceType] || { color: 'var(--accent)', icon: '🔨' };
+  const selectedMeta = SERVICE_META[form.serviceType] || { color: 'var(--accent)', icon: '🔨', bg: 'var(--accentbg)' };
 
   return (
       <PageLayout>
-        <div style={{ maxWidth: '620px', animation: 'fadeUp 0.4s ease' }}>
+        <div style={{ animation: 'fadeUp 0.4s ease' }}>
 
           {/* Header */}
-          <div style={{ marginBottom: '32px' }}>
+          <div style={{ marginBottom: '28px' }}>
             <button onClick={() => navigate('/user/dashboard')} style={{
               display: 'inline-flex', alignItems: 'center', gap: '6px',
               background: 'none', border: 'none', color: 'var(--text3)',
@@ -1095,119 +1258,357 @@ export function NewRequestPage() {
             >
               <ChevronLeft size={15} /> Back to Dashboard
             </button>
-            <h1 style={{ fontFamily: 'var(--font-head)', fontSize: '28px', fontWeight: 800, letterSpacing: '-0.5px' }}>
+            <h1 style={{ fontFamily: 'var(--font-head)', fontSize: '32px', fontWeight: 800, letterSpacing: '-0.5px' }}>
               New Service Request
             </h1>
-            <p style={{ color: 'var(--text3)', marginTop: '6px', fontSize: '14px' }}>
-              Technicians will send you quotes before visiting
+            <p style={{ color: 'var(--text3)', marginTop: '6px', fontSize: '15px' }}>
+              Describe your issue and get matching quotes from verified local technicians in minutes.
             </p>
           </div>
 
+          {/* Two-Column Grid */}
           <div style={{
-            background: 'var(--bg2)', borderRadius: '20px',
-            border: '1px solid var(--border)', overflow: 'hidden',
+            display: 'grid',
+            gridTemplateColumns: isMobile ? '1fr' : '1.6fr 1fr',
+            gap: '28px',
+            alignItems: 'start'
           }}>
-            {/* Colored header stripe */}
+
+            {/* Left Column: Request Form Card */}
             <div style={{
-              height: 4,
-              background: `linear-gradient(90deg, ${selectedMeta.color}, ${selectedMeta.color}00)`,
-              transition: 'background 0.3s ease',
-            }} />
+              background: 'var(--bg2)', borderRadius: '20px',
+              border: '1px solid var(--border)', overflow: 'hidden',
+            }}>
+              {/* Colored header stripe */}
+              <div style={{
+                height: 4,
+                background: `linear-gradient(90deg, ${selectedMeta.color}, ${selectedMeta.color}00)`,
+                transition: 'background 0.3s ease',
+              }} />
 
-            <div style={{ padding: '28px' }}>
-              <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
+              <div style={{ padding: '28px' }}>
+                <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
 
-                {/* Service type grid */}
-                <div>
-                  <label style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text2)', display: 'block', marginBottom: '10px' }}>
-                    Service Type
-                  </label>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
-                    {SERVICE_TYPES.map(s => {
-                      const m = SERVICE_META[s] || { icon: '🔨', color: 'var(--accent)', bg: 'var(--accentbg)' };
-                      const selected = form.serviceType === s;
-                      return (
-                          <button key={s} type="button" onClick={() => setForm(p => ({ ...p, serviceType: s }))} style={{
-                            padding: '10px 8px', borderRadius: '12px',
-                            border: `1px solid ${selected ? m.color + '60' : 'var(--border)'}`,
-                            background: selected ? m.bg : 'var(--bg3)',
-                            cursor: 'pointer', transition: 'all 0.2s ease',
-                            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px',
-                            boxShadow: selected ? `0 4px 12px ${m.color}20` : 'none',
-                          }}>
-                            <span style={{ fontSize: '20px' }}>{m.icon}</span>
-                            <span style={{ fontSize: '10px', fontFamily: 'var(--font)', color: selected ? m.color : 'var(--text3)', fontWeight: selected ? 600 : 400, textAlign: 'center', lineHeight: 1.2 }}>
-                          {s.replace(/_/g, ' ')}
-                        </span>
-                          </button>
-                      );
-                    })}
+                  {/* Service type grouped selector */}
+                  <div>
+                    <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text2)', display: 'block', marginBottom: '12px' }}>
+                      Select Service Category
+                    </label>
+                    
+                    {[
+                      {
+                        title: 'Repairs & Maintenance',
+                        types: ['ELECTRICIAN', 'PLUMBER', 'AC_REPAIR', 'CARPENTER', 'PAINTER', 'APPLIANCE_REPAIR', 'NETWORKING_TECH']
+                      },
+                      {
+                        title: 'Specialty & Home Services',
+                        types: ['CLEANING', 'PEST_CONTROL', 'TAILORING', 'BEAUTICIAN', 'MEHANDI_SERVICES', 'GENERAL_HELPER']
+                      }
+                    ].map(group => (
+                      <div key={group.title} style={{ marginBottom: '18px' }}>
+                        <div style={{ textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--text3)', fontSize: '10px', fontWeight: 800, marginBottom: '8px' }}>
+                          {group.title}
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '8px' }}>
+                          {group.types.map(s => {
+                            const m = SERVICE_META[s] || { icon: '🔨', color: 'var(--accent)', bg: 'var(--accentbg)' };
+                            const selected = form.serviceType === s;
+                            return (
+                              <button key={s} type="button" onClick={() => setForm(p => ({ ...p, serviceType: s }))} style={{
+                                padding: '10px 8px', borderRadius: '12px',
+                                border: `1px solid ${selected ? m.color + '80' : 'var(--border)'}`,
+                                background: selected ? m.bg : 'var(--bg3)',
+                                cursor: 'pointer', transition: 'all 0.2s ease',
+                                display: 'flex', alignItems: 'center', gap: '8px',
+                                boxShadow: selected ? `0 4px 14px ${m.color}20` : 'none',
+                              }}
+                                      onMouseEnter={e => { if(!selected) e.currentTarget.style.borderColor = 'var(--border2)'; }}
+                                      onMouseLeave={e => { if(!selected) e.currentTarget.style.borderColor = 'var(--border)'; }}
+                              >
+                                <span style={{ fontSize: '18px' }}>{m.icon}</span>
+                                <span style={{ fontSize: '12px', fontFamily: 'var(--font)', color: selected ? m.color : 'var(--text2)', fontWeight: selected ? 600 : 500, textAlign: 'left', lineHeight: 1.1 }}>
+                                  {s.replace(/_/g, ' ')}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <Textarea label="Describe the service details"
+                            placeholder="Please explain what you need support with in detail..."
+                            value={form.description} minLength={10}
+                            onChange={e => setForm(p => ({ ...p, description: e.target.value }))} required
+                  />
+
+                  <AddressAutocomplete
+                      value={form.address}
+                      onChange={addr => setForm(p => ({ ...p, address: addr }))}
+                      onLocationSelect={(lat, lon) => {
+                        setForm(p => ({ ...p, userLatitude: lat.toFixed(6), userLongitude: lon.toFixed(6) }));
+                        toast.success('Location auto-detected! ✅');
+                      }}
+                  />
+
+                  <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <button type="button" onClick={getLocation} disabled={locLoading} style={{
+                      padding: '10px 16px', borderRadius: '10px',
+                      border: '1px solid var(--border)', background: 'var(--bg3)',
+                      color: 'var(--text2)', cursor: locLoading ? 'not-allowed' : 'pointer',
+                      fontSize: '13px', fontFamily: 'var(--font)', fontWeight: 500,
+                      display: 'inline-flex', alignItems: 'center', gap: '7px',
+                      opacity: locLoading ? 0.7 : 1, transition: 'all 0.2s ease',
+                    }}>
+                      {locLoading ? <RefreshCw size={13} className="spin" /> : <MapPin size={13} />}
+                      Use GPS Instead
+                    </button>
+
+                    {form.userLatitude && form.userLongitude && (
+                        <div style={{
+                          padding: '10px 14px', background: 'rgba(16,185,129,0.08)',
+                          borderRadius: '10px', fontSize: '12px', color: '#10b981',
+                          display: 'flex', alignItems: 'center', gap: '8px',
+                          border: '1px solid rgba(16,185,129,0.2)',
+                        }}>
+                          <CheckCircle size={13} />
+                          Location set: {form.userLatitude}, {form.userLongitude}
+                        </div>
+                    )}
+                  </div>
+
+                  <div style={{ borderTop: '1px solid var(--border)', paddingTop: '20px', display: 'flex', gap: '12px' }}>
+                    <button type="button" onClick={() => navigate('/user/dashboard')} style={{
+                      flex: 1, padding: '12px', borderRadius: '12px',
+                      border: '1px solid var(--border)', background: 'transparent',
+                      color: 'var(--text2)', cursor: 'pointer', fontSize: '14px',
+                      fontFamily: 'var(--font)', transition: 'all 0.2s ease',
+                    }}>Cancel</button>
+                    <button type="submit" disabled={loading} style={{
+                      flex: 2, padding: '12px', borderRadius: '12px', border: 'none',
+                      background: 'var(--accent)', color: '#fff',
+                      cursor: loading ? 'not-allowed' : 'pointer',
+                      fontSize: '14px', fontWeight: 700, fontFamily: 'var(--font)',
+                      opacity: loading ? 0.7 : 1,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                      boxShadow: '0 4px 20px rgba(255,107,43,0.35)',
+                      transition: 'all 0.2s ease',
+                    }}>
+                      <Plus size={15} /> Submit Request
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+
+            {/* Right Column: Side Preview Map & Dynamic Service Showcase */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+
+              {/* Dynamic Service Showcase Card */}
+              {form.serviceType && (
+                <div style={{
+                  background: 'var(--bg2)', borderRadius: '20px',
+                  border: '1px solid var(--border)', overflow: 'hidden',
+                  display: 'flex', flexDirection: 'column', animation: 'fadeUp 0.3s ease'
+                }}>
+                  <div style={{ position: 'relative', height: '170px', overflow: 'hidden' }}>
+                    <img
+                        src={
+                          form.serviceType === 'ELECTRICIAN'
+                              ? 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=500'
+                              : form.serviceType === 'PLUMBER'
+                                  ? 'https://tse1.explicit.bing.net/th/id/OIP.mJPruqxQGzd3dcTZTrCeEAHaFj?w=2000&h=1500&rs=1&pid=ImgDetMain&o=7&rm=3'
+                                  : form.serviceType === 'AC_REPAIR'
+                                      ? 'https://techsquadteam.com/assets/profile/blogimages/f00ab4df455700aeb2ff86da0cb79fe2.png'
+                                      : form.serviceType === 'CARPENTER'
+                                          ? 'https://images.pexels.com/photos/5974337/pexels-photo-5974337.jpeg?auto=compress&w=500'
+                                          : form.serviceType === 'PAINTER'
+                                              ? 'https://images.pexels.com/photos/6474475/pexels-photo-6474475.jpeg?auto=compress&w=500'
+                                              : form.serviceType === 'APPLIANCE_REPAIR'
+                                                  ? 'https://images.pexels.com/photos/5691659/pexels-photo-5691659.jpeg?auto=compress&w=500'
+                                                  : form.serviceType === 'CLEANING'
+                                                      ? 'https://static.vecteezy.com/system/resources/thumbnails/026/936/992/small_2x/ai-generative-young-woman-housewife-clean-wash-hardwood-floor-in-modern-living-room-interior-tidy-girl-cleaner-maid-holding-mop-at-home-housekeeping-and-household-domestic-housework-cleaning-ser-photo.jpg'
+                                                      : form.serviceType === 'PEST_CONTROL'
+                                                          ? 'https://images.pexels.com/photos/6969809/pexels-photo-6969809.jpeg?auto=compress&w=500'
+                                                          : form.serviceType === 'NETWORKING_TECH'
+                                                              ? 'https://images.pexels.com/photos/442150/pexels-photo-442150.jpeg?auto=compress&w=500'
+                                                              : form.serviceType === 'TAILORING'
+                                                                  ? 'https://helonix.com/cdn/shop/files/81wFF_YkJyL._SL1500.jpg?v=1704308176&width=500'
+                                                                  : form.serviceType === 'BEAUTICIAN'
+                                                                      ? 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=500'
+                                                                      : form.serviceType === 'MEHANDI_SERVICES'
+                                                                          ? 'https://i.pinimg.com/originals/3b/e1/f1/3be1f17ddea804b00b9b1769dcb15591.jpg'
+                                                                          : form.serviceType === 'GENERAL_HELPER'
+                                                                              ? 'https://tse4.mm.bing.net/th/id/OIP.qV9YNzPfCWtM0CBP9vSr2gHaE7?rs=1&pid=ImgDetMain&o=7&rm=3'
+                                                                              : 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=500'
+                        }
+                      alt={form.serviceType}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                    <div style={{
+                      position: 'absolute', inset: 0,
+                      background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 80%)'
+                    }} />
+                    <div style={{
+                      position: 'absolute', bottom: '14px', left: '16px',
+                      display: 'flex', alignItems: 'center', gap: '8px'
+                    }}>
+                      <span style={{ fontSize: '20px' }}>{selectedMeta.icon}</span>
+                      <span style={{ color: '#fff', fontWeight: 800, fontSize: '17px', fontFamily: 'var(--font-head)' }}>
+                        {form.serviceType.replace(/_/g, ' ')}
+                      </span>
+                    </div>
+                  </div>
+                  <div style={{ padding: '14px 16px', fontSize: '12px', color: 'var(--text2)', lineHeight: 1.5, background: 'var(--bg2)' }}>
+                    Our verified service professionals bring equipment, experience, and are fully vetted.
                   </div>
                 </div>
+              )}
 
-                <Textarea label="Describe the problem"
-                          placeholder="Describe the issue in detail (min 10 characters)..."
-                          value={form.description} minLength={10}
-                          onChange={e => setForm(p => ({ ...p, description: e.target.value }))} required
-                />
+              {/* Map Preview Box */}
+              <div style={{
+                background: 'var(--bg2)', borderRadius: '20px',
+                border: '1px solid var(--border)', padding: '18px',
+                display: 'flex', flexDirection: 'column', gap: '12px'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text2)' }}>Location Preview (Drag pin to set)</span>
+                  <span style={{ fontSize: '11px', color: form.userLatitude ? '#10b981' : 'var(--text3)', fontWeight: 600 }}>
+                    {form.userLatitude ? '● DETECTED' : '⏳ Waiting for Location'}
+                  </span>
+                </div>
 
-                <AddressAutocomplete
-                    value={form.address}
-                    onChange={addr => setForm(p => ({ ...p, address: addr }))}
-                    onLocationSelect={(lat, lon) => {
-                      setForm(p => ({ ...p, userLatitude: lat.toFixed(6), userLongitude: lon.toFixed(6) }));
-                      toast.success('Location auto-detected! ✅');
-                    }}
-                />
-
-                {form.userLatitude && form.userLongitude && (
+                {form.userLatitude && form.userLongitude ? (
                     <div style={{
-                      padding: '10px 14px', background: 'rgba(16,185,129,0.08)',
-                      borderRadius: '10px', fontSize: '12px', color: '#10b981',
-                      display: 'flex', alignItems: 'center', gap: '8px',
-                      border: '1px solid rgba(16,185,129,0.2)',
+                      borderRadius: '12px', overflow: 'hidden',
+                      border: '1px solid var(--border)', height: '220px',
+                      position: 'relative', isolation: 'isolate'
                     }}>
-                      <CheckCircle size={13} />
-                      Location set: {form.userLatitude}, {form.userLongitude}
+                      <MapContainer
+                          center={[parseFloat(form.userLatitude), parseFloat(form.userLongitude)]}
+                          zoom={15}
+                          style={{ height: '100%', width: '100%' }}
+                          scrollWheelZoom={false}
+                      >
+                        <TileLayer
+                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                            attribution='&copy; OpenStreetMap contributors'
+                        />
+                        <ChangeMapView coords={[parseFloat(form.userLatitude), parseFloat(form.userLongitude)]} />
+                        <Marker 
+                          position={[parseFloat(form.userLatitude), parseFloat(form.userLongitude)]} 
+                          icon={customerIcon}
+                          draggable={true}
+                          eventHandlers={{
+                            dragend: async (e) => {
+                              const marker = e.target;
+                              const position = marker.getLatLng();
+                              const lat = position.lat;
+                              const lng = position.lng;
+                              setForm(p => ({ ...p, userLatitude: lat.toFixed(6), userLongitude: lng.toFixed(6) }));
+                              try {
+                                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`, { headers: { 'Accept-Language': 'en' } });
+                                const data = await res.json();
+                                if (data.display_name) {
+                                  setForm(p => ({ ...p, address: data.display_name }));
+                                }
+                              } catch (err) { /* silent */ }
+                            }
+                          }}
+                        >
+                          <Popup>📍 Drag me to adjust location</Popup>
+                        </Marker>
+                      </MapContainer>
+                    </div>
+                ) : (
+                    <div style={{
+                      height: '220px', borderRadius: '12px',
+                      border: '1px dashed var(--border2)', background: 'var(--bg3)',
+                      display: 'flex', flexDirection: 'column', alignItems: 'center',
+                      justifyContent: 'center', gap: '12px', color: 'var(--text3)',
+                      padding: '24px', textAlign: 'center'
+                    }}>
+                      <div style={{
+                        width: 48, height: 48, borderRadius: '50%',
+                        background: 'rgba(255,107,43,0.1)', color: 'var(--accent)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center'
+                      }}>
+                        <MapPin size={22} />
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 600, color: 'var(--text2)', fontSize: '13px', marginBottom: '4px' }}>No Location Selected</div>
+                        <div style={{ fontSize: '11px', lineHeight: 1.4 }}>Enter an address or use GPS to display the location on the map.</div>
+                      </div>
                     </div>
                 )}
+              </div>
 
-                <button type="button" onClick={getLocation} disabled={locLoading} style={{
-                  padding: '10px 16px', borderRadius: '10px',
-                  border: '1px solid var(--border)', background: 'var(--bg3)',
-                  color: 'var(--text2)', cursor: locLoading ? 'not-allowed' : 'pointer',
-                  fontSize: '13px', fontFamily: 'var(--font)', fontWeight: 500,
-                  display: 'inline-flex', alignItems: 'center', gap: '7px',
-                  opacity: locLoading ? 0.7 : 1, transition: 'all 0.2s ease',
-                  alignSelf: 'flex-start',
-                }}>
-                  {locLoading ? <RefreshCw size={13} className="spin" /> : <MapPin size={13} />}
-                  Use GPS Instead
-                </button>
+              {/* Service Info / Tips Box */}
+              <div style={{
+                background: 'var(--bg2)', borderRadius: '20px',
+                border: '1px solid var(--border)', overflow: 'hidden',
+                position: 'relative'
+              }}>
+                <div style={{
+                  height: 4,
+                  background: selectedMeta.color,
+                  opacity: 0.8
+                }} />
 
-                <div style={{ borderTop: '1px solid var(--border)', paddingTop: '20px', display: 'flex', gap: '12px' }}>
-                  <button type="button" onClick={() => navigate('/user/dashboard')} style={{
-                    flex: 1, padding: '12px', borderRadius: '12px',
-                    border: '1px solid var(--border)', background: 'transparent',
-                    color: 'var(--text2)', cursor: 'pointer', fontSize: '14px',
-                    fontFamily: 'var(--font)', transition: 'all 0.2s ease',
-                  }}>Cancel</button>
-                  <button type="submit" disabled={loading} style={{
-                    flex: 2, padding: '12px', borderRadius: '12px', border: 'none',
-                    background: 'var(--accent)', color: '#fff',
-                    cursor: loading ? 'not-allowed' : 'pointer',
-                    fontSize: '14px', fontWeight: 700, fontFamily: 'var(--font)',
-                    opacity: loading ? 0.7 : 1,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                    boxShadow: '0 4px 20px rgba(255,107,43,0.35)',
-                    transition: 'all 0.2s ease',
-                  }}>
-                    <Plus size={15} /> Submit Request
-                  </button>
+                <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{
+                      width: 40, height: 40, borderRadius: '10px',
+                      background: selectedMeta.bg, color: selectedMeta.color,
+                      display: 'flex', alignItems: 'center', justifyItems: 'center',
+                      justifyContent: 'center', fontSize: '20px'
+                    }}>
+                      {selectedMeta.icon}
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '12px', color: 'var(--text3)', fontWeight: 500 }}>Selected Category</div>
+                      <div style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text)' }}>
+                        {form.serviceType.replace(/_/g, ' ')}
+                      </div>
+                    </div>
+                  </div>
+
+                  <p style={{ fontSize: '12px', color: 'var(--text2)', lineHeight: 1.5, margin: 0 }}>
+                    {SERVICE_DETAILS[form.serviceType]?.desc}
+                  </p>
+
+                  <div style={{ display: 'flex', gap: '8px', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', padding: '12px 0' }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '10px', color: 'var(--text3)', textTransform: 'uppercase', fontWeight: 600 }}>Est. Dispatch ETA</div>
+                      <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text2)', marginTop: '2px' }}>
+                        {SERVICE_DETAILS[form.serviceType]?.eta}
+                      </div>
+                    </div>
+                    <div style={{ flex: 1, borderLeft: '1px solid var(--border)', paddingLeft: '12px' }}>
+                      <div style={{ fontSize: '10px', color: 'var(--text3)', textTransform: 'uppercase', fontWeight: 600 }}>Typical Cost</div>
+                      <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text2)', marginTop: '2px' }}>
+                        {SERVICE_DETAILS[form.serviceType]?.price}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text2)', marginBottom: '8px' }}>RapidFix Guarantees:</div>
+                    <ul style={{ margin: 0, paddingLeft: '16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      {SERVICE_DETAILS[form.serviceType]?.benefits.map((b, i) => (
+                          <li key={i} style={{ fontSize: '11px', color: 'var(--text3)' }}>{b}</li>
+                      ))}
+                    </ul>
+                  </div>
+
                 </div>
-              </form>
+              </div>
+
             </div>
+
           </div>
+
         </div>
       </PageLayout>
   );

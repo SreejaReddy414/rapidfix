@@ -15,5 +15,6 @@ public interface TechnicianService {
     TechnicianResponse updateRating(Long id, RatingRequest request);
     TechnicianResponse updateRatingByUserId(Long userId, RatingRequest request);  // ← ADD THIS LINE
     List<NearbyTechnicianResponse> findNearbyAvailable(Double lat, Double lon, Double radiusKm, ServiceType serviceType);
+    TechnicianResponse updateProfile(Long userId, TechnicianProfileUpdateRequest request);
     void deleteTechnician(Long id);
 }

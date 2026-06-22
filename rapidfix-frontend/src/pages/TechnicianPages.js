@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import ChatBox from '../components/ChatBox';
 
-const SERVICE_TYPES = ['ELECTRICIAN','PLUMBER','AC_REPAIR','CARPENTER','PAINTER','CLEANER','APPLIANCE_REPAIR','PEST_CONTROL'];
+const SERVICE_TYPES = ['ELECTRICIAN','PLUMBER','AC_REPAIR','CARPENTER','PAINTER','CLEANER','APPLIANCE_REPAIR','PEST_CONTROL','TAILORING','NETWORKING_TECH','BEAUTICIAN','MEHANDI_SERVICES','GENERAL_HELPER'];
 const PAGE_SIZE = 5;
 
 // ─── SERVICE META ─────────────────────────────────────────────
@@ -27,6 +27,11 @@ const SERVICE_META = {
   CLEANER:         { icon: '🧹', color: '#10b981', bg: 'rgba(16,185,129,0.12)' },
   APPLIANCE_REPAIR:{ icon: '🔌', color: '#f97316', bg: 'rgba(249,115,22,0.12)' },
   PEST_CONTROL:    { icon: '🐛', color: '#84cc16', bg: 'rgba(132,204,22,0.12)' },
+  TAILORING:       { icon: '🪡', color: '#ec4899', bg: 'rgba(236,72,153,0.12)' },
+  NETWORKING_TECH: { icon: '📶', color: '#14b8a6', bg: 'rgba(20,184,166,0.12)' },
+  BEAUTICIAN:      { icon: '💄', color: '#d946ef', bg: 'rgba(217,70,239,0.12)' },
+  MEHANDI_SERVICES:{ icon: '🌿', color: '#84cc16', bg: 'rgba(132,204,22,0.12)' },
+  GENERAL_HELPER:  { icon: '🙋🏽‍♂️', color: '#6366f1', bg: 'rgba(99,102,241,0.12)' },
 };
 
 // ─── STATUS META ──────────────────────────────────────────────
@@ -728,7 +733,7 @@ function JobCard({ job, mode, onRefresh, techProfile }) {
             )}
 
             {/* Browse mode action */}
-            {mode === 'browse' && job.status === 'PENDING' && (
+            {mode === 'browse' && ['PENDING', 'QUOTED'].includes(job.status) && (
                 <button onClick={() => setShowQuote(true)} style={{
                   width: '100%', padding: '11px', borderRadius: '12px', border: 'none',
                   background: 'var(--accent)', color: '#fff', cursor: 'pointer',
@@ -1539,5 +1544,336 @@ export function MyJobsPage() {
           }
         </div>
       </PageLayout>
+  );
+}
+
+// ─── TECHNICIAN EARNINGS PAGE ──────────────────────────────────
+export function TechnicianEarningsPage() {
+  const { user } = useAuth();
+  const [profile, setProfile] = useState(null);
+  const [jobs, setJobs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filterService, setFilterService] = useState('ALL');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    techAPI.getByUserId(user.id).then(r => {
+      setProfile(r.data);
+      return dispatchAPI.getByTechnician(r.data.userId, { page: 0, size: 100 });
+    }).then(r => {
+      setJobs(r.data.content || []);
+    })
+    .catch(() => toast.error('Failed to load earnings details'))
+    .finally(() => setLoading(false));
+  }, [user.id]);
+
+  if (loading) return <><Navbar /><LoadingScreen /></>;
+
+  const completedJobs = jobs.filter(j => j.status === 'COMPLETED');
+  
+  const filteredJobs = completedJobs.filter(j => {
+    const matchesService = filterService === 'ALL' || j.serviceType === filterService;
+    const matchesSearch = searchQuery === '' || 
+      (j.userName && j.userName.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (j.address && j.address.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (j.serviceType && j.serviceType.toLowerCase().replace(/_/g, ' ').includes(searchQuery.toLowerCase()));
+    return matchesService && matchesSearch;
+  });
+
+  const totalEarnings = completedJobs.reduce((sum, j) => sum + (j.finalAmount || 0), 0);
+  const avgEarnings = completedJobs.length > 0 ? Math.round(totalEarnings / completedJobs.length) : 0;
+
+  const monthlyEarnings = completedJobs.reduce((acc, j) => {
+    const dateVal = j.completedAt || j.createdAt;
+    const monthKey = new Date(dateVal).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+    acc[monthKey] = (acc[monthKey] || 0) + (j.finalAmount || 0);
+    return acc;
+  }, {});
+
+  const maxMonthly = Math.max(...Object.values(monthlyEarnings), 1);
+
+  return (
+    <PageLayout>
+      <div style={{ animation: 'fadeUp 0.4s ease', display: 'flex', flexDirection: 'column', gap: '28px' }}>
+        
+        {/* Page Title */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h1 style={{ fontFamily: 'var(--font-head)', fontSize: '32px', fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text)' }}>
+              Earnings Hub
+            </h1>
+            <p style={{ color: 'var(--text3)', marginTop: '4px', fontSize: '14px' }}>
+              Real-time analytics and detailed records of your payouts.
+            </p>
+          </div>
+          <button 
+            onClick={() => {
+              setLoading(true);
+              dispatchAPI.getByTechnician(profile.userId, { page: 0, size: 100 })
+                .then(r => setJobs(r.data.content || []))
+                .catch(() => toast.error('Failed to refresh data'))
+                .finally(() => setLoading(false));
+            }}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '6px',
+              padding: '8px 16px', borderRadius: '10px',
+              border: '1px solid var(--border)', background: 'var(--bg2)',
+              color: 'var(--text2)', cursor: 'pointer', fontSize: '13px',
+              fontFamily: 'var(--font)', transition: 'all 0.2s ease',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.color = 'var(--text)'; e.currentTarget.style.borderColor = 'var(--border2)'; }}
+            onMouseLeave={e => { e.currentTarget.style.color = 'var(--text2)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
+          >
+            <RefreshCw size={13} /> Refresh Data
+          </button>
+        </div>
+
+        {/* Dynamic Metric Grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' }}>
+          
+          {/* Card 1: Total Earnings */}
+          <div style={{ 
+            background: 'linear-gradient(135deg, var(--bg2), rgba(255,107,43,0.05))', 
+            border: '1px solid var(--border)', borderRadius: '20px', padding: '24px', 
+            position: 'relative', overflow: 'hidden', transition: 'all 0.3s ease',
+            boxShadow: 'var(--shadow2)'
+          }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(255,107,43,0.3)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.transform = 'none'; }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Total Revenues
+                </span>
+                <h2 style={{ fontSize: '34px', fontFamily: 'var(--font-head)', fontWeight: 800, color: 'var(--accent)', marginTop: '8px', lineHeight: 1 }}>
+                  ₹{totalEarnings.toLocaleString('en-IN')}
+                </h2>
+              </div>
+              <div style={{ width: 44, height: 44, borderRadius: '12px', background: 'rgba(255,107,43,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
+                <TrendingUp size={20} />
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '16px', fontSize: '12px', color: 'var(--text3)' }}>
+              <span style={{ color: '#10b981', fontWeight: 600 }}>100% payout</span>
+              <span>sent to verified account</span>
+            </div>
+          </div>
+
+          {/* Card 2: Completed Bookings */}
+          <div style={{ 
+            background: 'linear-gradient(135deg, var(--bg2), rgba(16,185,129,0.05))', 
+            border: '1px solid var(--border)', borderRadius: '20px', padding: '24px', 
+            position: 'relative', overflow: 'hidden', transition: 'all 0.3s ease',
+            boxShadow: 'var(--shadow2)'
+          }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(16,185,129,0.3)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.transform = 'none'; }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Completed Jobs
+                </span>
+                <h2 style={{ fontSize: '34px', fontFamily: 'var(--font-head)', fontWeight: 800, color: '#10b981', marginTop: '8px', lineHeight: 1 }}>
+                  {completedJobs.length}
+                </h2>
+              </div>
+              <div style={{ width: 44, height: 44, borderRadius: '12px', background: 'rgba(16,185,129,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#10b981' }}>
+                <CheckCircle size={20} />
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '16px', fontSize: '12px', color: 'var(--text3)' }}>
+              <span style={{ color: '#10b981', fontWeight: 600 }}>0 disputes</span>
+              <span>across all service bookings</span>
+            </div>
+          </div>
+
+          {/* Card 3: Avg Booking Ticket */}
+          <div style={{ 
+            background: 'linear-gradient(135deg, var(--bg2), rgba(59,130,246,0.05))', 
+            border: '1px solid var(--border)', borderRadius: '20px', padding: '24px', 
+            position: 'relative', overflow: 'hidden', transition: 'all 0.3s ease',
+            boxShadow: 'var(--shadow2)'
+          }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(59,130,246,0.3)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.transform = 'none'; }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Average Ticket Payout
+                </span>
+                <h2 style={{ fontSize: '34px', fontFamily: 'var(--font-head)', fontWeight: 800, color: '#3b82f6', marginTop: '8px', lineHeight: 1 }}>
+                  ₹{avgEarnings.toLocaleString('en-IN')}
+                </h2>
+              </div>
+              <div style={{ width: 44, height: 44, borderRadius: '12px', background: 'rgba(59,130,246,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3b82f6' }}>
+                <Briefcase size={20} />
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '16px', fontSize: '12px', color: 'var(--text3)' }}>
+              <span>Calculated based on completed booking averages</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Dashboard Panels */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.8fr', gap: '24px', alignItems: 'flex-start' }}>
+          
+          {/* Monthly Growth Breakdown */}
+          <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '20px', padding: '24px', boxShadow: 'var(--shadow)' }}>
+            <h3 style={{ fontFamily: 'var(--font-head)', fontSize: '18px', fontWeight: 700, margin: '0 0 20px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <TrendingUp size={18} color="var(--accent)" /> Monthly Breakdown
+            </h3>
+            
+            {Object.keys(monthlyEarnings).length === 0 ? (
+              <div style={{ color: 'var(--text3)', fontSize: '14px', textAlign: 'center', padding: '40px 20px', background: 'var(--bg3)', borderRadius: '12px' }}>
+                No completed jobs recorded for analysis yet.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                {Object.entries(monthlyEarnings).map(([month, amount]) => {
+                  const percentage = (amount / maxMonthly) * 100;
+                  return (
+                    <div key={month} style={{ transition: 'all 0.2s ease' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '8px' }}>
+                        <span style={{ fontWeight: 600, color: 'var(--text)' }}>{month}</span>
+                        <span style={{ color: 'var(--accent)', fontWeight: 700 }}>₹{amount.toLocaleString('en-IN')}</span>
+                      </div>
+                      <div style={{ height: '10px', background: 'var(--bg3)', borderRadius: '100px', overflow: 'hidden', padding: '1px' }}>
+                        <div style={{ 
+                          height: '100%', 
+                          width: `${percentage}%`, 
+                          background: 'linear-gradient(90deg, var(--accent), var(--accent2))', 
+                          borderRadius: '100px', 
+                          transition: 'width 0.6s cubic-bezier(0.16, 1, 0.3, 1)' 
+                        }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Job Payout Logs */}
+          <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '20px', padding: '24px', boxShadow: 'var(--shadow)' }}>
+            
+            {/* Header with Search and Filter */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '20px', borderBottom: '1px solid var(--border)', paddingBottom: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ fontFamily: 'var(--font-head)', fontSize: '18px', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Wrench size={18} color="#10b981" /> Job Payout Logs
+                </h3>
+                <span style={{ fontSize: '12px', background: 'var(--bg3)', padding: '4px 10px', borderRadius: '10px', color: 'var(--text2)', fontWeight: 500 }}>
+                  {filteredJobs.length} Record{filteredJobs.length !== 1 ? 's' : ''}
+                </span>
+              </div>
+              
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <div style={{ position: 'relative', flex: 1 }}>
+                  <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text3)' }} />
+                  <input 
+                    type="text" 
+                    placeholder="Search by customer, service or address..." 
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    style={{
+                      width: '100%', padding: '8px 12px 8px 36px',
+                      background: 'var(--bg3)', border: '1px solid var(--border)',
+                      borderRadius: '10px', color: 'var(--text)', fontSize: '13px',
+                      fontFamily: 'var(--font)', outline: 'none'
+                    }}
+                  />
+                </div>
+                
+                <select 
+                  value={filterService}
+                  onChange={e => setFilterService(e.target.value)}
+                  style={{
+                    padding: '8px 12px', background: 'var(--bg3)', border: '1px solid var(--border)',
+                    borderRadius: '10px', color: 'var(--text)', fontSize: '13px',
+                    fontFamily: 'var(--font)', outline: 'none', cursor: 'pointer'
+                  }}
+                >
+                  <option value="ALL">All Services</option>
+                  {SERVICE_TYPES.map(type => (
+                    <option key={type} value={type}>{type.replace(/_/g, ' ')}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* List */}
+            {filteredJobs.length === 0 ? (
+              <div style={{ color: 'var(--text3)', fontSize: '14px', textAlign: 'center', padding: '60px 20px', background: 'var(--bg3)', borderRadius: '12px' }}>
+                {completedJobs.length === 0 
+                  ? 'No completed job payouts found.' 
+                  : 'No results matching your filters.'
+                }
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '420px', overflowY: 'auto', paddingRight: '4px' }}>
+                {filteredJobs.map(j => {
+                  const meta = SERVICE_META[j.serviceType] || { icon: '🔨', color: 'var(--accent)', bg: 'rgba(255,107,43,0.1)' };
+                  return (
+                    <div 
+                      key={j.id} 
+                      style={{ 
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
+                        padding: '16px', background: 'var(--bg3)', borderRadius: '12px', 
+                        border: '1px solid var(--border)', transition: 'all 0.2s ease'
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border2)'; e.currentTarget.style.transform = 'translateX(2px)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.transform = 'none'; }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{
+                          width: 40, height: 40, borderRadius: '10px',
+                          background: meta.bg, border: `1px solid ${meta.color}25`,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: '18px'
+                        }}>
+                          {meta.icon}
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text)' }}>
+                            {j.serviceType?.replace(/_/g, ' ')}
+                          </div>
+                          <div style={{ fontSize: '12px', color: 'var(--text3)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span>{new Date(j.completedAt || j.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                            <span>•</span>
+                            <span>{j.userName}</span>
+                            {j.actualHours && (
+                              <>
+                                <span>•</span>
+                                <span>{j.actualHours} hrs</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontWeight: 800, fontSize: '16px', color: '#10b981' }}>
+                          + ₹{j.finalAmount?.toLocaleString('en-IN') || 0}
+                        </div>
+                        {j.travelCharge > 0 && (
+                          <div style={{ fontSize: '10px', color: 'var(--text3)', marginTop: '2px' }}>
+                            (Incl. travel: ₹{j.travelCharge})
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+        </div>
+      </div>
+    </PageLayout>
   );
 }

@@ -6,6 +6,7 @@ com\rapidfix\technician\service\impl\TechnicianServiceImpl.class
 com\rapidfix\technician\dto\NearbyTechnicianResponse$NearbyTechnicianResponseBuilder.class
 com\rapidfix\technician\dto\RatingRequest$RatingRequestBuilder.class
 com\rapidfix\technician\dto\TechnicianRequest$TechnicianRequestBuilder.class
+com\rapidfix\technician\dto\TechnicianProfileUpdateRequest.class
 com\rapidfix\technician\dto\LocationUpdateRequest.class
 com\rapidfix\technician\dto\TechnicianResponse$TechnicianResponseBuilder.class
 com\rapidfix\technician\dto\RatingRequest.class
@@ -28,3 +29,4 @@ com\rapidfix\technician\entity\Technician.class
 com\rapidfix\technician\util\MessageService.class
 com\rapidfix\technician\entity\Technician$TechnicianBuilder.class
 com\rapidfix\technician\exception\GlobalExceptionHandler$ErrorResponse.class
+com\rapidfix\technician\dto\TechnicianProfileUpdateRequest$TechnicianProfileUpdateRequestBuilder.class

@@ -122,6 +122,31 @@ public class TechnicianServiceImpl implements TechnicianService {
     }
 
     @Override @Transactional
+    public TechnicianResponse updateProfile(Long userId, TechnicianProfileUpdateRequest req) {
+        log.info("Updating technician profile for userId={}", userId);
+        Technician t = repo.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Technician profile not found"));
+
+        if (req.getPhone() != null) {
+            t.setPhone(req.getPhone());
+        }
+        if (req.getServiceTypes() != null) {
+            if (t.getServiceTypes() == null) {
+                t.setServiceTypes(req.getServiceTypes());
+            } else {
+                try {
+                    t.getServiceTypes().clear();
+                    t.getServiceTypes().addAll(req.getServiceTypes());
+                } catch (UnsupportedOperationException e) {
+                    t.setServiceTypes(new java.util.HashSet<>(req.getServiceTypes()));
+                }
+            }
+        }
+
+        return mapper.toResponse(repo.save(t));
+    }
+
+    @Override @Transactional
     public void deleteTechnician(Long id) {
         if (!repo.existsById(id))
             throw new ResourceNotFoundException(
@@ -149,6 +174,6 @@ public class TechnicianServiceImpl implements TechnicianService {
         double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
                 + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
                 * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) * 1.3;
     }
 }
