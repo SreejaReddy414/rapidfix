@@ -61,3 +61,14 @@ export const dispatchAPI = {
   cancel:         (id)       => API.patch(`/api/requests/${id}/cancel`),
   getRequestsByStatus: (status, params) => API.get(`/api/requests/status/${status}`, { params }),
 };
+
+export const paymentAPI = {
+  // Creates a Razorpay order on the backend; returns { razorpayOrderId, amount, currency, keyId, ... }
+  createOrder: (requestId) => API.post(`/api/payments/create-order?requestId=${requestId}`),
+  // Verifies the payment signature server-side and marks the job PAID (no webhook needed)
+  // Sent as JSON body to avoid URL-encoding issues with Razorpay's base64 signature
+  verify: (requestId, razorpayOrderId, razorpayPaymentId, razorpaySignature) =>
+    API.post('/api/payments/verify', { requestId, razorpayOrderId, razorpayPaymentId, razorpaySignature }),
+  // Returns current payment status for a given service request
+  getStatus:   (requestId) => API.get(`/api/payments/status/${requestId}`),
+};

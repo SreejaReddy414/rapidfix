@@ -21,10 +21,10 @@ const SERVICES = [
 ];
 
 const STATS = [
-    { value: '50K+', label: 'Jobs Completed' },
+    { value: '50+', label: 'Jobs Completed' },
     { value: '4.9★', label: 'Avg. Rating' },
     { value: '15min', label: 'Avg. Response' },
-    { value: '2000+', label: 'Service Pros' },
+    { value: '20+', label: 'Service Pros' },
 ];
 
 const HOW_IT_WORKS = [
@@ -302,7 +302,7 @@ function Services({ onGetStarted }) {
                         Whatever's broken,<br />we've got someone for it.
                     </h2>
                     <p style={{ color: 'var(--text2)', fontSize: '17px', maxWidth: '480px', margin: '0 auto' }}>
-                        8 service categories. Hundreds of verified pros. Ready when you are.
+                        13 service categories. Hundreds of verified pros. Ready when you are.
                     </p>
                 </div>
 

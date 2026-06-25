@@ -6,5 +6,6 @@ public enum RequestStatus {
     APPROVED,       // User approved the quote — technician will now visit
     IN_PROGRESS,    // Technician on site, working
     COMPLETED,      // Job fully done
+    PAID,           // User paid the final amount via Razorpay
     CANCELLED       // Cancelled by user or system
 }

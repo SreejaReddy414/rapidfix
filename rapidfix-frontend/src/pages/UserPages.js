@@ -10,9 +10,10 @@ import L from 'leaflet';
 import {
   Plus, MapPin, XCircle, RefreshCw, CheckCircle, Star,
   Clock, FileText, ChevronLeft, ChevronRight, Wrench,
-  TrendingUp, AlertCircle, Activity, Navigation2
+  TrendingUp, AlertCircle, Activity, Navigation2, CreditCard
 } from 'lucide-react';
 import ChatBox from '../components/ChatBox';
+import PaymentModal from '../components/PaymentModal';
 
 // ─── LEAFLET Z-INDEX FIX ──────────────────────────────────────
 if (typeof document !== 'undefined') {
@@ -656,6 +657,11 @@ function RequestCard({ request, onRefresh, onChatActiveChange }) {
   const [approveLoading, setApproveLoading] = useState(false);
   const [rejectLoading,  setRejectLoading]  = useState(false);
   const [showReview,     setShowReview]     = useState(false);
+  const [showPayment,    setShowPayment]    = useState(false);
+  // Read paid state from localStorage so it survives page refresh
+  const [paidLocally,    setPaidLocally]    = useState(
+    () => localStorage.getItem(`rfx_paid_${request.id}`) === 'true'
+  );
   const [liveDistance,   setLiveDistance]   = useState(null);
   const [quotes,         setQuotes]         = useState([]);
   const [quotesLoading,  setQuotesLoading]  = useState(false);
@@ -828,13 +834,17 @@ function RequestCard({ request, onRefresh, onChatActiveChange }) {
                 />
             )}
 
-            {/* Final amount */}
-            {request.status === 'COMPLETED' && request.finalAmount && (
+            {/* Final Bill + Payment — shown for COMPLETED and PAID */}
+            {(request.status === 'COMPLETED' || request.status === 'PAID') && request.finalAmount && (() => {
+              const isPaid = paidLocally || request.paymentStatus === 'PAID' || request.status === 'PAID';
+              return (
                 <div style={{
-                  padding: '14px', background: 'rgba(16,185,129,0.06)',
-                  borderRadius: '12px', border: '1px solid rgba(16,185,129,0.2)', fontSize: '13px',
+                  padding: '14px', background: isPaid ? 'rgba(16,185,129,0.06)' : 'rgba(108,99,255,0.05)',
+                  borderRadius: '12px',
+                  border: `1px solid ${isPaid ? 'rgba(16,185,129,0.2)' : 'rgba(108,99,255,0.2)'}`,
+                  fontSize: '13px',
                 }}>
-                  <div style={{ fontWeight: 600, marginBottom: '10px', color: '#10b981', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  <div style={{ fontWeight: 600, marginBottom: '10px', color: isPaid ? '#10b981' : '#6c63ff', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                     Final Bill
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
@@ -846,19 +856,42 @@ function RequestCard({ request, onRefresh, onChatActiveChange }) {
                     <span>₹{request.actualApplianceCharge?.toFixed(0)}</span>
                   </div>
                   {request.travelCharge > 0 && (
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                  <span style={{ color: 'var(--text3)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <Navigation2 size={11} /> Travel
-                  </span>
-                        <span>₹{request.travelCharge?.toFixed(0)}</span>
-                      </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                      <span style={{ color: 'var(--text3)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Navigation2 size={11} /> Travel
+                      </span>
+                      <span>₹{request.travelCharge?.toFixed(0)}</span>
+                    </div>
                   )}
-                  <div style={{ borderTop: '1px solid rgba(16,185,129,0.2)', paddingTop: '10px', marginTop: '6px', display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: '15px' }}>
-                    <span>Total Paid</span>
-                    <span style={{ color: '#10b981' }}>₹{request.finalAmount?.toFixed(0)}</span>
+                  <div style={{ borderTop: `1px solid ${isPaid ? 'rgba(16,185,129,0.2)' : 'rgba(108,99,255,0.2)'}`, paddingTop: '10px', marginTop: '6px', display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: '15px' }}>
+                    <span style={{ color: isPaid ? '#10b981' : 'var(--text)' }}>
+                      {isPaid ? '✓ Paid' : 'Total Due'}
+                    </span>
+                    <span style={{ color: isPaid ? '#10b981' : '#6c63ff' }}>₹{request.finalAmount?.toFixed(0)}</span>
                   </div>
+
+                  {/* Pay Now button — hidden once paid */}
+                  {!isPaid && (
+                    <button
+                      id={`pay-now-btn-${request.id}`}
+                      onClick={() => setShowPayment(true)}
+                      style={{
+                        width: '100%', marginTop: '12px', padding: '13px',
+                        borderRadius: '10px', border: 'none',
+                        background: 'linear-gradient(135deg, #6c63ff 0%, #a855f7 100%)',
+                        color: '#fff', fontSize: '14px', fontWeight: 700,
+                        cursor: 'pointer', display: 'flex', alignItems: 'center',
+                        justifyContent: 'center', gap: '8px',
+                        boxShadow: '0 6px 20px rgba(108,99,255,0.3)',
+                        transition: 'opacity 0.2s, transform 0.15s',
+                      }}
+                    >
+                      <CreditCard size={15} /> Pay ₹{request.finalAmount?.toLocaleString('en-IN')} Now
+                    </button>
+                  )}
                 </div>
-            )}
+              );
+            })()}
 
             {/* Quotes list */}
             {['PENDING', 'QUOTED'].includes(request.status) && (
@@ -955,6 +988,20 @@ function RequestCard({ request, onRefresh, onChatActiveChange }) {
 
         {showReview && (
             <ReviewModal request={request} onClose={() => setShowReview(false)} onDone={onRefresh} />
+        )}
+        {showPayment && (
+            <PaymentModal
+              request={request}
+              onClose={() => setShowPayment(false)}
+              onPaymentSuccess={() => {
+                // Persist in localStorage so button stays hidden after page refresh
+                localStorage.setItem(`rfx_paid_${request.id}`, 'true');
+                setPaidLocally(true);   // immediately hide the Pay button
+                setShowPayment(false);  // close the modal
+                // Delay refresh so paidLocally state survives the re-render
+                setTimeout(() => { if (onRefresh) onRefresh(); }, 1500);
+              }}
+            />
         )}
       </>
   );
@@ -1072,7 +1119,7 @@ export function UserDashboard() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
             <div>
               <h1 style={{ fontFamily: 'var(--font-head)', fontSize: '30px', fontWeight: 800, letterSpacing: '-0.5px', lineHeight: 1.1 }}>
-                Hello, {user?.name?.split(' ')[0]} 👋
+                Hello, {user?.name?.split(' ')[0]}
               </h1>
               <p style={{ color: 'var(--text3)', marginTop: '6px', fontSize: '14px' }}>
                 Manage your service requests
@@ -1641,7 +1688,7 @@ export function UserRequestsPage() {
     return () => clearInterval(iv);
   }, [chatActive]);
 
-  const STATUS_FILTERS = ['ALL','PENDING','QUOTED','APPROVED','IN_PROGRESS','COMPLETED','CANCELLED'];
+  const STATUS_FILTERS = ['ALL','PENDING','QUOTED','APPROVED','IN_PROGRESS','COMPLETED','PAID','CANCELLED'];
   const filtered = filter === 'ALL' ? requests : requests.filter(r => r.status === filter);
   const handleFilterChange = (f) => { setFilter(f); setPage(0); };
 

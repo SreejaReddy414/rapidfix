@@ -57,4 +57,11 @@ public class ServiceRequest {
 
     @CreationTimestamp @Column(updatable = false) private LocalDateTime createdAt;
     @UpdateTimestamp private LocalDateTime updatedAt;
+
+    // ─── PAYMENT FIELDS ──────────────────────────────────────────
+    private String razorpayOrderId;   // e.g. order_xxxxx
+    private String razorpayPaymentId; // e.g. pay_xxxxx (set after webhook)
+    @Builder.Default
+    private String paymentStatus = "UNPAID"; // UNPAID | PAID | FAILED
+    private LocalDateTime paidAt;
 }

@@ -41,4 +41,10 @@ public class ServiceRequestResponse {
     private LocalDateTime broadcastedAt;
     private LocalDateTime completedAt;
     private LocalDateTime createdAt;
+
+    // Payment
+    private String paymentStatus;       // UNPAID | PAID | FAILED
+    private String razorpayOrderId;
+    private String razorpayPaymentId;
+    private LocalDateTime paidAt;
 }
