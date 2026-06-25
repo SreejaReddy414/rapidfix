@@ -165,7 +165,7 @@ public class DispatchController {
 
     @GetMapping("/{id}/quotes")
     @Operation(summary = "Get all quotes for a request")
-    public ResponseEntity<java.util.List<com.rapidfix.dispatch.dto.QuoteResponse>> getQuotes(@PathVariable Long id) {
+    public ResponseEntity<java.util.List<QuoteResponse>> getQuotes(@PathVariable Long id) {
         return ResponseEntity.ok(dispatchService.getQuotesForRequest(id));
     }
 

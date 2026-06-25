@@ -1,0 +1,522 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DispatchServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">dispatch-service</a> &gt; <a href="index.source.html" class="el_package">com.rapidfix.dispatch.service.impl</a> &gt; <span class="el_source">DispatchServiceImpl.java</span></div><h1>DispatchServiceImpl.java</h1><pre class="source lang-java linenums">package com.rapidfix.dispatch.service.impl;
+
+import com.rapidfix.dispatch.dto.*;
+import com.rapidfix.dispatch.entity.*;
+import com.rapidfix.dispatch.exception.*;
+import com.rapidfix.dispatch.mapper.ServiceRequestMapper;
+import com.rapidfix.dispatch.repository.*;
+import com.rapidfix.dispatch.service.DispatchService;
+import com.rapidfix.dispatch.util.MessageService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.data.domain.*;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.reactive.function.client.WebClient;
+import java.time.LocalDateTime;
+import java.util.*;
+import com.rapidfix.dispatch.client.TechnicianServiceClient;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
+
+<span class="fc" id="L24">@Service @RequiredArgsConstructor @Slf4j</span>
+public class DispatchServiceImpl implements DispatchService {
+
+    private final ServiceRequestRepository requestRepo;
+    private final DispatchLogRepository logRepo;
+    private final ServiceRequestMapper mapper;
+    private final TechnicianServiceClient technicianServiceClient;
+    private final MessageService messages;
+    private final JavaMailSender mailSender;
+    private final com.rapidfix.dispatch.repository.QuoteRepository quoteRepo;
+
+    @Value(&quot;${dispatch.broadcast-timeout-seconds:60}&quot;)
+    private int broadcastTimeoutSeconds;
+
+    @Value(&quot;${dispatch.auto-assign-radius-km:20.0}&quot;)
+    private double autoAssignRadiusKm;
+    @Value(&quot;${spring.mail.username}&quot;)
+    private String senderEmail;
+
+    @Override @Transactional
+    public ServiceRequestResponse createRequest(ServiceRequestCreate req, Long userId, String userEmail) {
+<span class="fc" id="L45">        log.info(&quot;New service request from userId={} ({}) for {}&quot;, userId, userEmail, req.getServiceType());</span>
+
+<span class="fc" id="L47">        ServiceRequest sr = ServiceRequest.builder()</span>
+<span class="fc" id="L48">                .userId(userId).userName(userEmail)</span>
+<span class="fc" id="L49">                .serviceType(req.getServiceType())</span>
+<span class="fc" id="L50">                .description(req.getDescription())</span>
+<span class="fc" id="L51">                .userLatitude(req.getUserLatitude())</span>
+<span class="fc" id="L52">                .userLongitude(req.getUserLongitude())</span>
+<span class="fc" id="L53">                .address(req.getAddress())</span>
+<span class="fc" id="L54">                .status(RequestStatus.PENDING)</span>
+<span class="fc" id="L55">                .broadcastedAt(LocalDateTime.now())</span>
+<span class="fc" id="L56">                .build();</span>
+
+<span class="fc" id="L58">        ServiceRequest saved = requestRepo.save(sr);</span>
+<span class="fc" id="L59">        log.info(&quot;ServiceRequest created id={}&quot;, saved.getId());</span>
+<span class="fc" id="L60">        broadcastToNearby(saved);</span>
+<span class="fc" id="L61">        return mapper.toResponse(saved);</span>
+    }
+
+    @Override @Transactional(readOnly = true)
+    public ServiceRequestResponse getRequestById(Long id) {
+<span class="fc" id="L66">        return mapper.toResponse(findById(id));</span>
+    }
+
+    @Override @Transactional(readOnly = true)
+    public PagedResponse&lt;ServiceRequestResponse&gt; getRequestsByUser(Long userId, Pageable pageable) {
+<span class="fc" id="L71">        return toPagedResponse(requestRepo.findByUserId(userId, pageable));</span>
+    }
+
+    @Override @Transactional(readOnly = true)
+    public PagedResponse&lt;ServiceRequestResponse&gt; getRequestsByTechnician(Long technicianId, Pageable pageable) {
+<span class="pc bpc" id="L76" title="1 of 2 branches missed.">        if (technicianServiceClient.fetchTechnicianEmail(technicianId) == null) {</span>
+<span class="nc" id="L77">            throw new ResourceNotFoundException(&quot;Technician not found with ID: &quot; + technicianId);</span>
+        }
+<span class="fc" id="L79">        return toPagedResponse(requestRepo.findByTechnicianId(technicianId, pageable));</span>
+    }
+
+    @Override @Transactional(readOnly = true)
+    public PagedResponse&lt;ServiceRequestResponse&gt; getRequestsByStatus(RequestStatus status, Pageable pageable) {
+<span class="fc" id="L84">        return toPagedResponse(requestRepo.findByStatus(status, pageable));</span>
+    }
+
+    @Override @Transactional(readOnly = true)
+    public PagedResponse&lt;ServiceRequestResponse&gt; getAvailableRequestsByServiceType(
+            ServiceType serviceType, Long technicianId, Pageable pageable) {
+<span class="fc" id="L90">        log.debug(&quot;Fetching PENDING/QUOTED requests for serviceType={}, technicianId={}&quot;, serviceType, technicianId);</span>
+<span class="fc" id="L91">        Page&lt;ServiceRequest&gt; page = requestRepo.findAvailableRequestsForTechnician(</span>
+                serviceType, technicianId, pageable);
+<span class="fc" id="L93">        return toPagedResponse(page);</span>
+    }
+
+    @Override @Transactional
+    public ServiceRequestResponse submitQuote(Long requestId, QuoteRequest quote,
+                                              Long technicianId, String technicianName) {
+<span class="fc" id="L99">        log.info(&quot;Technician {} submitting quote for request {}&quot;, technicianId, requestId);</span>
+<span class="fc" id="L100">        ServiceRequest sr = findById(requestId);</span>
+
+<span class="pc bpc" id="L102" title="1 of 4 branches missed.">        if (sr.getStatus() != RequestStatus.PENDING &amp;&amp; sr.getStatus() != RequestStatus.QUOTED)</span>
+<span class="fc" id="L103">            throw new InvalidStateException(</span>
+<span class="fc" id="L104">                    messages.get(&quot;error.quote.not.pending&quot;, sr.getStatus()));</span>
+
+<span class="fc" id="L106">        double freeRadiusKm = 3.0;</span>
+<span class="fc" id="L107">        double ratePerKm = 12.0;</span>
+
+        // Fetch technician location and calculate distance if not already set
+<span class="fc bfc" id="L110" title="All 2 branches covered.">        if (sr.getDistanceKm() == null) {</span>
+            try {
+<span class="fc" id="L112">                NearbyTechnicianDto techInfo = fetchNearbyTechnicians(</span>
+<span class="fc" id="L113">                        sr.getUserLatitude(), sr.getUserLongitude(), 20.0, sr.getServiceType().name())</span>
+<span class="fc" id="L114">                        .stream()</span>
+<span class="fc" id="L115">                        .filter(t -&gt; t.getUserId().equals(technicianId))</span>
+<span class="fc" id="L116">                        .findFirst()</span>
+<span class="fc" id="L117">                        .orElse(null);</span>
+
+<span class="fc bfc" id="L119" title="All 2 branches covered.">                if (techInfo != null) {</span>
+<span class="fc" id="L120">                    sr.setDistanceKm(techInfo.getDistanceKm());</span>
+<span class="fc" id="L121">                    log.info(&quot;Distance calculated for request {}: {}km&quot;, requestId, techInfo.getDistanceKm());</span>
+                }
+<span class="fc" id="L123">            } catch (Exception e) {</span>
+<span class="fc" id="L124">                log.warn(&quot;Could not fetch technician distance: {}&quot;, e.getMessage());</span>
+<span class="fc" id="L125">            }</span>
+        }
+
+<span class="fc bfc" id="L128" title="All 2 branches covered.">        double distanceKm = sr.getDistanceKm() != null ? sr.getDistanceKm() : 0.0;</span>
+<span class="fc" id="L129">        double travelCharge = Math.max(0, distanceKm - freeRadiusKm) * ratePerKm;</span>
+<span class="fc" id="L130">        double total = (quote.getHourlyRate() * quote.getEstimatedHours()) + quote.getApplianceCharge() + travelCharge;</span>
+
+<span class="fc" id="L132">        Quote q = quoteRepo.findByRequestIdAndTechnicianId(requestId, technicianId)</span>
+<span class="fc" id="L133">                .orElse(Quote.builder()</span>
+<span class="fc" id="L134">                        .requestId(requestId)</span>
+<span class="fc" id="L135">                        .technicianId(technicianId)</span>
+<span class="fc" id="L136">                        .build());</span>
+<span class="fc" id="L137">        q.setTechnicianName(technicianName);</span>
+<span class="fc" id="L138">        q.setHourlyRate(quote.getHourlyRate());</span>
+<span class="fc" id="L139">        q.setEstimatedHours(quote.getEstimatedHours());</span>
+<span class="fc" id="L140">        q.setApplianceCharge(quote.getApplianceCharge());</span>
+<span class="fc" id="L141">        q.setTravelCharge(travelCharge);</span>
+<span class="fc" id="L142">        q.setDistanceKm(distanceKm);</span>
+<span class="fc" id="L143">        q.setTotalAmount(Math.round(total * 100.0) / 100.0);</span>
+<span class="fc" id="L144">        q.setQuoteNote(quote.getQuoteNote());</span>
+<span class="fc" id="L145">        q.setStatus(QuoteStatus.PENDING);</span>
+<span class="fc" id="L146">        q.setTechnicianPhone(quote.getTechnicianPhone());</span>
+<span class="fc" id="L147">        quoteRepo.save(q);</span>
+
+        // Keep single-technician fields for compatibility (write latest quote details to request)
+<span class="fc" id="L150">        sr.setTechnicianId(technicianId);</span>
+<span class="fc" id="L151">        sr.setTechnicianName(technicianName);</span>
+<span class="fc" id="L152">        sr.setHourlyRate(quote.getHourlyRate());</span>
+<span class="fc" id="L153">        sr.setEstimatedHours(quote.getEstimatedHours());</span>
+<span class="fc" id="L154">        sr.setApplianceCharge(quote.getApplianceCharge());</span>
+<span class="fc" id="L155">        sr.setTotalAmount(Math.round(total * 100.0) / 100.0);</span>
+<span class="fc" id="L156">        sr.setTravelCharge(travelCharge);</span>
+<span class="fc" id="L157">        sr.setQuoteNote(quote.getQuoteNote());</span>
+<span class="fc" id="L158">        sr.setStatus(RequestStatus.QUOTED);</span>
+<span class="fc" id="L159">        sr.setQuotedAt(LocalDateTime.now());</span>
+<span class="fc" id="L160">        sr.setTechnicianPhone(quote.getTechnicianPhone());</span>
+
+<span class="fc" id="L162">        updateTechnicianAvailability(technicianId, &quot;BUSY&quot;);</span>
+<span class="fc" id="L163">        logAction(requestId, technicianId, &quot;QUOTED&quot;,</span>
+<span class="fc" id="L164">                String.format(&quot;₹%.0f/hr × %.1fhr + ₹%.0f parts + ₹%.0f travel = ₹%.0f&quot;,</span>
+<span class="fc" id="L165">                        quote.getHourlyRate(), quote.getEstimatedHours(),</span>
+<span class="fc" id="L166">                        quote.getApplianceCharge(), travelCharge, total));</span>
+<span class="fc" id="L167">        log.info(&quot;Quote submitted: ₹{} total for request {} (distance: {}km, travel: ₹{})&quot;,</span>
+<span class="fc" id="L168">                total, requestId, distanceKm, travelCharge);</span>
+<span class="fc" id="L169">        return mapper.toResponse(requestRepo.save(sr));</span>
+    }
+
+    @Override @Transactional
+    public ServiceRequestResponse approveQuote(Long requestId, Long technicianId) {
+<span class="fc" id="L174">        log.info(&quot;User approving quote from technician {} for request {}&quot;, technicianId, requestId);</span>
+<span class="fc" id="L175">        ServiceRequest sr = findById(requestId);</span>
+
+<span class="fc bfc" id="L177" title="All 2 branches covered.">        if (sr.getStatus() != RequestStatus.QUOTED)</span>
+<span class="fc" id="L178">            throw new InvalidStateException(</span>
+<span class="fc" id="L179">                    messages.get(&quot;error.quote.not.quoted.approve&quot;, sr.getStatus()));</span>
+
+<span class="fc" id="L181">        Quote approvedQuote = quoteRepo.findByRequestIdAndTechnicianId(requestId, technicianId)</span>
+<span class="pc" id="L182">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Quote not found&quot;));</span>
+
+<span class="fc" id="L184">        List&lt;Quote&gt; allQuotes = quoteRepo.findByRequestId(requestId);</span>
+<span class="fc bfc" id="L185" title="All 2 branches covered.">        for (Quote q : allQuotes) {</span>
+<span class="pc bpc" id="L186" title="1 of 2 branches missed.">            if (q.getTechnicianId().equals(technicianId)) {</span>
+<span class="fc" id="L187">                q.setStatus(QuoteStatus.APPROVED);</span>
+            } else {
+<span class="nc" id="L189">                q.setStatus(QuoteStatus.REJECTED);</span>
+<span class="nc" id="L190">                updateTechnicianAvailability(q.getTechnicianId(), &quot;AVAILABLE&quot;);</span>
+            }
+<span class="fc" id="L192">            quoteRepo.save(q);</span>
+<span class="fc" id="L193">        }</span>
+
+<span class="fc" id="L195">        sr.setStatus(RequestStatus.APPROVED);</span>
+<span class="fc" id="L196">        sr.setApprovedAt(LocalDateTime.now());</span>
+<span class="fc" id="L197">        sr.setTechnicianId(approvedQuote.getTechnicianId());</span>
+<span class="fc" id="L198">        sr.setTechnicianName(approvedQuote.getTechnicianName());</span>
+<span class="fc" id="L199">        sr.setTechnicianPhone(approvedQuote.getTechnicianPhone());</span>
+<span class="fc" id="L200">        sr.setHourlyRate(approvedQuote.getHourlyRate());</span>
+<span class="fc" id="L201">        sr.setEstimatedHours(approvedQuote.getEstimatedHours());</span>
+<span class="fc" id="L202">        sr.setApplianceCharge(approvedQuote.getApplianceCharge());</span>
+<span class="fc" id="L203">        sr.setTravelCharge(approvedQuote.getTravelCharge());</span>
+<span class="fc" id="L204">        sr.setDistanceKm(approvedQuote.getDistanceKm());</span>
+<span class="fc" id="L205">        sr.setTotalAmount(approvedQuote.getTotalAmount());</span>
+<span class="fc" id="L206">        sr.setQuoteNote(approvedQuote.getQuoteNote());</span>
+
+<span class="pc bpc" id="L208" title="1 of 2 branches missed.">        double dist = approvedQuote.getDistanceKm() != null ? approvedQuote.getDistanceKm() : 2.0;</span>
+<span class="fc" id="L209">        long travelMinutes = Math.round((dist / 30.0) * 60);</span>
+<span class="fc" id="L210">        long etaMinutes = travelMinutes + 5;</span>
+<span class="fc" id="L211">        sr.setEstimatedArrivalTime(LocalDateTime.now().plusMinutes(etaMinutes));</span>
+<span class="fc" id="L212">        log.info(&quot;ETA: {}km → {} mins&quot;, dist, etaMinutes);</span>
+<span class="fc" id="L213">        updateTechnicianAvailability(technicianId, &quot;BUSY&quot;);</span>
+
+<span class="fc" id="L215">        logAction(requestId, technicianId, &quot;QUOTE_APPROVED&quot;,</span>
+<span class="fc" id="L216">                &quot;User approved ₹&quot; + approvedQuote.getTotalAmount());</span>
+<span class="fc" id="L217">        log.info(&quot;Quote approved for request {}. Technician {} now visiting.&quot;, requestId, technicianId);</span>
+<span class="fc" id="L218">        return mapper.toResponse(requestRepo.save(sr));</span>
+    }
+
+    @Override @Transactional
+    public ServiceRequestResponse rejectQuote(Long requestId, Long technicianId) {
+<span class="fc" id="L223">        log.info(&quot;User rejecting quote from technician {} for request {}&quot;, technicianId, requestId);</span>
+<span class="fc" id="L224">        ServiceRequest sr = findById(requestId);</span>
+
+<span class="fc bfc" id="L226" title="All 2 branches covered.">        if (sr.getStatus() != RequestStatus.QUOTED)</span>
+<span class="fc" id="L227">            throw new InvalidStateException(</span>
+<span class="fc" id="L228">                    messages.get(&quot;error.quote.not.quoted.reject&quot;, sr.getStatus()));</span>
+
+<span class="fc" id="L230">        Quote q = quoteRepo.findByRequestIdAndTechnicianId(requestId, technicianId)</span>
+<span class="pc" id="L231">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Quote not found&quot;));</span>
+<span class="fc" id="L232">        q.setStatus(QuoteStatus.REJECTED);</span>
+<span class="fc" id="L233">        quoteRepo.save(q);</span>
+
+<span class="fc" id="L235">        updateTechnicianAvailability(technicianId, &quot;AVAILABLE&quot;);</span>
+
+<span class="fc" id="L237">        List&lt;Quote&gt; activeQuotes = quoteRepo.findByRequestId(requestId).stream()</span>
+<span class="pc bpc" id="L238" title="1 of 2 branches missed.">                .filter(quote -&gt; quote.getStatus() == QuoteStatus.PENDING)</span>
+<span class="fc" id="L239">                .toList();</span>
+
+<span class="pc bpc" id="L241" title="1 of 2 branches missed.">        if (activeQuotes.isEmpty()) {</span>
+<span class="fc" id="L242">            sr.setStatus(RequestStatus.PENDING);</span>
+<span class="fc" id="L243">            sr.setTechnicianId(null);</span>
+<span class="fc" id="L244">            sr.setTechnicianName(null);</span>
+<span class="fc" id="L245">            sr.setHourlyRate(null);</span>
+<span class="fc" id="L246">            sr.setEstimatedHours(null);</span>
+<span class="fc" id="L247">            sr.setApplianceCharge(null);</span>
+<span class="fc" id="L248">            sr.setTotalAmount(null);</span>
+<span class="fc" id="L249">            sr.setQuoteNote(null);</span>
+<span class="fc" id="L250">            sr.setQuotedAt(null);</span>
+<span class="fc" id="L251">            sr.setApprovedAt(null);</span>
+<span class="fc" id="L252">            sr.setBroadcastedAt(LocalDateTime.now());</span>
+        }
+
+<span class="fc" id="L255">        logAction(requestId, technicianId, &quot;QUOTE_REJECTED&quot;, &quot;User rejected quote&quot;);</span>
+<span class="fc" id="L256">        log.info(&quot;Quote rejected for request {}. Back to PENDING.&quot;, requestId);</span>
+<span class="fc" id="L257">        return mapper.toResponse(requestRepo.save(sr));</span>
+    }
+
+    @Override @Transactional
+    public ServiceRequestResponse markInProgress(Long requestId) {
+<span class="fc" id="L262">        ServiceRequest sr = findById(requestId);</span>
+<span class="fc bfc" id="L263" title="All 2 branches covered.">        if (sr.getStatus() != RequestStatus.APPROVED)</span>
+<span class="fc" id="L264">            throw new InvalidStateException(</span>
+<span class="fc" id="L265">                    messages.get(&quot;error.inprogress.not.approved&quot;, sr.getStatus()));  // ← CHANGED</span>
+<span class="fc" id="L266">        sr.setStatus(RequestStatus.IN_PROGRESS);</span>
+<span class="fc" id="L267">        log.info(&quot;Request {} IN_PROGRESS — technician on site&quot;, requestId);</span>
+<span class="fc" id="L268">        return mapper.toResponse(requestRepo.save(sr));</span>
+    }
+
+    @Override @Transactional
+    public ServiceRequestResponse completeRequest(Long requestId, CompletionRequest completion) {
+<span class="fc" id="L273">        ServiceRequest sr = findById(requestId);</span>
+<span class="fc bfc" id="L274" title="All 2 branches covered.">        if (sr.getStatus() != RequestStatus.IN_PROGRESS)</span>
+<span class="fc" id="L275">            throw new InvalidStateException(</span>
+<span class="fc" id="L276">                    messages.get(&quot;error.complete.not.inprogress&quot;, sr.getStatus()));  // ← CHANGED</span>
+
+<span class="fc bfc" id="L278" title="All 2 branches covered.">        double travelCharge = sr.getTravelCharge() != null ? sr.getTravelCharge() : 0.0;</span>
+<span class="fc" id="L279">        double finalAmt = (sr.getHourlyRate() * completion.getActualHours())</span>
+<span class="fc" id="L280">                + completion.getActualApplianceCharge()</span>
+                + travelCharge; // ← ADD THIS
+
+<span class="fc" id="L283">        sr.setActualHours(completion.getActualHours());</span>
+<span class="fc" id="L284">        sr.setActualApplianceCharge(completion.getActualApplianceCharge());</span>
+<span class="fc" id="L285">        sr.setFinalAmount(Math.round(finalAmt * 100.0) / 100.0);</span>
+<span class="fc" id="L286">        sr.setCompletionNote(completion.getCompletionNote());</span>
+<span class="fc" id="L287">        sr.setStatus(RequestStatus.COMPLETED);</span>
+<span class="fc" id="L288">        sr.setCompletedAt(LocalDateTime.now());</span>
+
+<span class="fc" id="L290">        updateTechnicianAvailability(sr.getTechnicianId(), &quot;AVAILABLE&quot;);</span>
+
+<span class="fc" id="L292">        logAction(requestId, sr.getTechnicianId(), &quot;COMPLETED&quot;,</span>
+<span class="fc" id="L293">                String.format(&quot;Actual: Rs%.0f/hr x %.1fhr + Rs%.0f parts = Rs%.0f final&quot;,</span>
+<span class="fc" id="L294">                        sr.getHourlyRate(), completion.getActualHours(),</span>
+<span class="fc" id="L295">                        completion.getActualApplianceCharge(), finalAmt));</span>
+
+<span class="fc" id="L297">        log.info(&quot;Request {} COMPLETED. Quoted: Rs{} | Final: Rs{}&quot;,</span>
+<span class="fc" id="L298">                requestId, sr.getTotalAmount(), finalAmt);</span>
+<span class="fc" id="L299">        return mapper.toResponse(requestRepo.save(sr));</span>
+    }
+
+    @Override @Transactional
+    public ServiceRequestResponse cancelRequest(Long requestId) {
+<span class="fc" id="L304">        ServiceRequest sr = findById(requestId);</span>
+<span class="fc bfc" id="L305" title="All 4 branches covered.">        if (sr.getStatus() == RequestStatus.COMPLETED || sr.getStatus() == RequestStatus.CANCELLED)</span>
+<span class="fc" id="L306">            throw new InvalidStateException(</span>
+<span class="fc" id="L307">                    messages.get(&quot;error.cancel.not.allowed&quot;, sr.getStatus()));  // ← CHANGED</span>
+<span class="fc" id="L308">        sr.setStatus(RequestStatus.CANCELLED);</span>
+<span class="fc bfc" id="L309" title="All 2 branches covered.">        if (sr.getTechnicianId() != null)</span>
+<span class="fc" id="L310">            updateTechnicianAvailability(sr.getTechnicianId(), &quot;AVAILABLE&quot;);</span>
+<span class="fc" id="L311">        log.info(&quot;Request {} CANCELLED&quot;, requestId);</span>
+<span class="fc" id="L312">        return mapper.toResponse(requestRepo.save(sr));</span>
+    }
+
+    @Override @Transactional
+    public void runAutoAssignment() {
+<span class="fc" id="L317">        LocalDateTime cutoff = LocalDateTime.now().minusSeconds(broadcastTimeoutSeconds);</span>
+<span class="fc" id="L318">        List&lt;ServiceRequest&gt; stale = requestRepo.findPendingRequestsOlderThan(cutoff);</span>
+<span class="fc bfc" id="L319" title="All 2 branches covered.">        if (stale.isEmpty()) return;</span>
+<span class="fc" id="L320">        log.info(&quot;Auto-assignment: {} stale PENDING requests&quot;, stale.size());</span>
+<span class="fc" id="L321">        stale.forEach(sr -&gt; {</span>
+<span class="fc" id="L322">            try { autoAssign(sr); }</span>
+<span class="fc" id="L323">            catch (Exception e) {</span>
+<span class="fc" id="L324">                log.error(&quot;Auto-assign failed for request {}: {}&quot;, sr.getId(), e.getMessage()); }</span>
+<span class="fc" id="L325">        });</span>
+<span class="fc" id="L326">    }</span>
+
+    private void autoAssign(ServiceRequest sr) {
+<span class="fc" id="L329">        double freeRadiusKm = 3.0;</span>
+<span class="fc" id="L330">        double ratePerKm    = 12.0;</span>
+<span class="fc" id="L331">        List&lt;NearbyTechnicianDto&gt; nearby = fetchNearbyTechnicians(</span>
+<span class="fc" id="L332">                sr.getUserLatitude(), sr.getUserLongitude(),</span>
+<span class="fc" id="L333">                autoAssignRadiusKm, sr.getServiceType().name());</span>
+
+<span class="fc bfc" id="L335" title="All 2 branches covered.">        if (nearby.isEmpty()) {</span>
+<span class="fc" id="L336">            log.warn(&quot;No technicians available for request {}. Re-queuing.&quot;, sr.getId());</span>
+<span class="fc" id="L337">            sr.setBroadcastAttempts(sr.getBroadcastAttempts() + 1);</span>
+<span class="fc" id="L338">            sr.setBroadcastedAt(LocalDateTime.now());</span>
+<span class="fc" id="L339">            requestRepo.save(sr);</span>
+<span class="fc" id="L340">            return;</span>
+        }
+
+<span class="fc" id="L343">        NearbyTechnicianDto best = nearby.stream()</span>
+<span class="fc" id="L344">                .max(Comparator.comparingDouble(t -&gt;</span>
+<span class="fc" id="L345">                        (t.getRating() * 0.6) + ((10.0 - Math.min(t.getDistanceKm(), 10.0)) * 0.4)))</span>
+<span class="fc" id="L346">                .orElseThrow();</span>
+
+<span class="fc" id="L348">        double defaultRate  = 300.0;</span>
+<span class="fc" id="L349">        double defaultHours = 1.0;</span>
+<span class="fc" id="L350">        double travelCharge = Math.max(0, best.getDistanceKm() - freeRadiusKm) * ratePerKm;</span>
+<span class="fc" id="L351">        travelCharge        = Math.round(travelCharge * 100.0) / 100.0;</span>
+<span class="fc" id="L352">        double total        = (defaultRate * defaultHours) + travelCharge;</span>
+
+<span class="fc" id="L354">        sr.setStatus(RequestStatus.QUOTED);</span>
+<span class="fc" id="L355">        sr.setTechnicianId(best.getUserId());</span>
+<span class="fc" id="L356">        sr.setTechnicianName(best.getName());</span>
+<span class="fc" id="L357">        sr.setHourlyRate(defaultRate);</span>
+<span class="fc" id="L358">        sr.setTravelCharge(travelCharge);</span>
+       // sr.setTravelCharge(travelCharge);
+<span class="fc" id="L360">        sr.setDistanceKm(best.getDistanceKm()); // ← ADD THIS</span>
+<span class="fc" id="L361">        sr.setEstimatedHours(defaultHours);</span>
+<span class="fc" id="L362">        sr.setApplianceCharge(0.0);</span>
+<span class="fc" id="L363">        sr.setTotalAmount(total);</span>
+<span class="fc" id="L364">        sr.setQuoteNote(&quot;Auto-assigned the best technician by system. Technician will assess and update quote on arrival.&quot;);</span>
+<span class="fc" id="L365">        sr.setQuotedAt(LocalDateTime.now());</span>
+<span class="fc" id="L366">        sr.setBroadcastAttempts(sr.getBroadcastAttempts() + 1);</span>
+<span class="fc" id="L367">        requestRepo.save(sr);</span>
+<span class="fc" id="L368">        updateTechnicianAvailability(best.getUserId(), &quot;BUSY&quot;);</span>
+<span class="fc" id="L369">        sendEmailToTechnician(best.getUserId(), sr,true);</span>
+<span class="fc" id="L370">        logAction(sr.getId(), best.getId(), &quot;AUTO_ASSIGNED&quot;,</span>
+<span class="fc" id="L371">                String.format(&quot;distance=%.2fkm rating=%.1f — default quote ₹%.0f&quot;,</span>
+<span class="fc" id="L372">                        best.getDistanceKm(), best.getRating(), total));</span>
+<span class="fc" id="L373">        log.info(&quot;Request {} auto-assigned to technician {} with default quote&quot;,</span>
+<span class="fc" id="L374">                sr.getId(), best.getId());</span>
+<span class="fc" id="L375">    }</span>
+
+    private void broadcastToNearby(ServiceRequest sr) {
+        try {
+<span class="fc" id="L379">            List&lt;NearbyTechnicianDto&gt; nearby = fetchNearbyTechnicians(</span>
+<span class="fc" id="L380">                    sr.getUserLatitude(), sr.getUserLongitude(),</span>
+<span class="fc" id="L381">                    autoAssignRadiusKm, sr.getServiceType().name());</span>
+<span class="fc" id="L382">            log.info(&quot;Broadcasted request {} to {} technicians&quot;, sr.getId(), nearby.size());</span>
+<span class="fc" id="L383">            nearby.forEach(t -&gt;</span>
+<span class="nc" id="L384">            {logAction(sr.getId(), t.getId(), &quot;OFFERED&quot;,</span>
+<span class="nc" id="L385">                    String.format(&quot;%.2fkm away&quot;, t.getDistanceKm()));</span>
+<span class="nc" id="L386">            sendEmailToTechnician(t.getUserId(), sr, false);});</span>
+<span class="fc" id="L387">        } catch (Exception e) {</span>
+<span class="fc" id="L388">            log.warn(&quot;Broadcast failed for request {}: {}&quot;, sr.getId(), e.getMessage());</span>
+<span class="fc" id="L389">        }</span>
+<span class="fc" id="L390">    }</span>
+
+    private List&lt;NearbyTechnicianDto&gt; fetchNearbyTechnicians(double lat, double lon,
+                                                             double radius, String serviceType) {
+<span class="fc" id="L394">        return technicianServiceClient.fetchNearbyTechnicians(lat, lon, radius, serviceType);</span>
+    }
+
+    @Override @Transactional
+    public ServiceRequestResponse markAsRated(Long requestId) {
+<span class="fc" id="L399">        ServiceRequest sr = findById(requestId);</span>
+<span class="fc" id="L400">        sr.setRated(true);</span>
+<span class="fc" id="L401">        return mapper.toResponse(requestRepo.save(sr));</span>
+    }
+
+    private void updateTechnicianAvailability(Long userId, String status) {
+<span class="fc" id="L405">        technicianServiceClient.updateTechnicianAvailability(userId, status);</span>
+<span class="fc" id="L406">    }</span>
+
+    private void logAction(Long requestId, Long technicianId, String action, String notes) {
+<span class="fc" id="L409">        logRepo.save(DispatchLog.builder()</span>
+<span class="fc" id="L410">                .requestId(requestId)</span>
+<span class="fc" id="L411">                .technicianId(technicianId)</span>
+<span class="fc" id="L412">                .action(action)</span>
+<span class="fc" id="L413">                .notes(notes)</span>
+<span class="fc" id="L414">                .build());</span>
+<span class="fc" id="L415">    }</span>
+
+    private ServiceRequest findById(Long id) {
+<span class="fc" id="L418">        return requestRepo.findById(id)</span>
+<span class="fc" id="L419">                .orElseThrow(() -&gt; new ResourceNotFoundException(</span>
+<span class="fc" id="L420">                        messages.get(&quot;error.request.not.found&quot;, id)));  // ← CHANGED</span>
+    }
+
+    private PagedResponse&lt;ServiceRequestResponse&gt; toPagedResponse(Page&lt;ServiceRequest&gt; page) {
+<span class="fc" id="L424">        return PagedResponse.&lt;ServiceRequestResponse&gt;builder()</span>
+<span class="fc" id="L425">                .content(page.getContent().stream().map(mapper::toResponse).toList())</span>
+<span class="fc" id="L426">                .page(page.getNumber()).size(page.getSize())</span>
+<span class="fc" id="L427">                .totalElements(page.getTotalElements())</span>
+<span class="fc" id="L428">                .totalPages(page.getTotalPages())</span>
+<span class="fc" id="L429">                .last(page.isLast())</span>
+<span class="fc" id="L430">                .build();</span>
+    }
+    @Override @Transactional
+    public ServiceRequestResponse withdrawQuote(Long requestId, Long technicianId) {
+<span class="fc" id="L434">        log.info(&quot;Technician {} withdrawing quote for request {}&quot;, technicianId, requestId);</span>
+<span class="fc" id="L435">        ServiceRequest sr = findById(requestId);</span>
+
+<span class="pc bpc" id="L437" title="1 of 4 branches missed.">        if (sr.getStatus() != RequestStatus.PENDING &amp;&amp; sr.getStatus() != RequestStatus.QUOTED)</span>
+<span class="fc" id="L438">            throw new InvalidStateException(&quot;Quote already acted upon&quot;);</span>
+
+<span class="fc" id="L440">        Quote q = quoteRepo.findByRequestIdAndTechnicianId(requestId, technicianId)</span>
+<span class="fc" id="L441">                .orElseThrow(() -&gt; new InvalidStateException(&quot;This is not your quote&quot;));</span>
+<span class="fc" id="L442">        q.setStatus(QuoteStatus.WITHDRAWN);</span>
+<span class="fc" id="L443">        quoteRepo.save(q);</span>
+
+<span class="fc" id="L445">        updateTechnicianAvailability(technicianId, &quot;AVAILABLE&quot;);</span>
+
+        // If all active quotes are withdrawn/rejected, revert request to PENDING
+<span class="fc" id="L448">        List&lt;Quote&gt; activeQuotes = quoteRepo.findByRequestId(requestId).stream()</span>
+<span class="pc bpc" id="L449" title="1 of 2 branches missed.">                .filter(quote -&gt; quote.getStatus() == QuoteStatus.PENDING)</span>
+<span class="fc" id="L450">                .toList();</span>
+
+<span class="pc bpc" id="L452" title="1 of 2 branches missed.">        if (activeQuotes.isEmpty()) {</span>
+<span class="fc" id="L453">            sr.setStatus(RequestStatus.PENDING);</span>
+<span class="fc" id="L454">            sr.setTechnicianId(null);</span>
+<span class="fc" id="L455">            sr.setTechnicianName(null);</span>
+<span class="fc" id="L456">            sr.setHourlyRate(null);</span>
+<span class="fc" id="L457">            sr.setEstimatedHours(null);</span>
+<span class="fc" id="L458">            sr.setApplianceCharge(null);</span>
+<span class="fc" id="L459">            sr.setTravelCharge(null);</span>
+<span class="fc" id="L460">            sr.setTotalAmount(null);</span>
+<span class="fc" id="L461">            sr.setQuoteNote(null);</span>
+<span class="fc" id="L462">            sr.setQuotedAt(null);</span>
+<span class="fc" id="L463">            sr.setTechnicianPhone(null);</span>
+<span class="fc" id="L464">            sr.setBroadcastedAt(LocalDateTime.now());</span>
+        }
+
+<span class="fc" id="L467">        logAction(requestId, technicianId, &quot;QUOTE_WITHDRAWN&quot;, &quot;Technician withdrew quote after timeout&quot;);</span>
+<span class="fc" id="L468">        log.info(&quot;Quote withdrawn for request {}. Back to PENDING.&quot;, requestId);</span>
+<span class="fc" id="L469">        return mapper.toResponse(requestRepo.save(sr));</span>
+    }
+
+    @Override
+    public List&lt;QuoteResponse&gt; getQuotesForRequest(Long requestId) {
+<span class="nc" id="L474">        return quoteRepo.findByRequestId(requestId).stream()</span>
+<span class="nc" id="L475">                .map(mapper::toQuoteResponse)</span>
+<span class="nc" id="L476">                .toList();</span>
+    }
+    private void sendEmailToTechnician(Long userId, ServiceRequest sr, boolean isAutoAssigned) {
+<span class="fc" id="L479">        String email = fetchTechnicianEmail(userId);</span>
+<span class="pc bpc" id="L480" title="1 of 2 branches missed.">        if (email == null) {</span>
+<span class="nc" id="L481">            log.warn(&quot;Could not send email: email not found for technician userId {}&quot;, userId);</span>
+<span class="nc" id="L482">            return;</span>
+        }
+
+<span class="pc bpc" id="L485" title="1 of 2 branches missed.">        String subject = isAutoAssigned</span>
+<span class="fc" id="L486">                ? &quot;New Auto-Assigned Job: &quot; + sr.getServiceType()</span>
+<span class="pc" id="L487">                : &quot;New Available Job Opportunity: &quot; + sr.getServiceType();</span>
+
+<span class="pc bpc" id="L489" title="1 of 2 branches missed.">        String bodyPrefix = isAutoAssigned</span>
+<span class="fc" id="L490">                ? &quot;You have been auto-assigned to a new job request (ID: &quot; + sr.getId() + &quot;).\n&quot;</span>
+<span class="pc" id="L491">                : &quot;A new job request has been posted near your location (ID: &quot; + sr.getId() + &quot;). Please check your dashboard to submit a quote.\n&quot;;</span>
+
+<span class="fc" id="L493">        String body = String.format(</span>
+                &quot;Hello %s,\n\n&quot; +
+                        &quot;%s&quot; +
+                        &quot;Service Type: %s\n&quot; +
+                        &quot;Description: %s\n&quot; +
+                        &quot;Address: %s\n\n&quot; +
+                        &quot;Please log in to the RapidFix Dashboard to view details.\n\n&quot; +
+                        &quot;Regards,\nRapidFix Team&quot;,
+<span class="pc bpc" id="L501" title="1 of 2 branches missed.">                sr.getTechnicianName() != null ? sr.getTechnicianName() : &quot;Technician&quot;,</span>
+<span class="fc" id="L502">                bodyPrefix, sr.getServiceType(), sr.getDescription(), sr.getAddress()</span>
+        );
+
+        try {
+<span class="fc" id="L506">            SimpleMailMessage message = new SimpleMailMessage();</span>
+<span class="fc" id="L507">            message.setTo(email);</span>
+<span class="fc" id="L508">            message.setSubject(subject);</span>
+<span class="fc" id="L509">            message.setText(body);</span>
+<span class="fc" id="L510">            message.setFrom(senderEmail);</span>
+
+<span class="fc" id="L512">            mailSender.send(message);</span>
+<span class="fc" id="L513">            log.info(&quot;Email notification sent to technician userId {} ({}) - autoAssigned={}&quot;, userId, email, isAutoAssigned);</span>
+<span class="nc" id="L514">        } catch (Exception e) {</span>
+<span class="nc" id="L515">            log.error(&quot;Failed to send SMTP email from {}: {}&quot;, senderEmail, e.getMessage(), e);</span>
+<span class="fc" id="L516">        }</span>
+<span class="fc" id="L517">    }</span>
+    private String fetchTechnicianEmail(Long userId) {
+<span class="fc" id="L519">        return technicianServiceClient.fetchTechnicianEmail(userId);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

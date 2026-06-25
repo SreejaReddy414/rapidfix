@@ -129,8 +129,8 @@ public class DispatchServiceImpl implements DispatchService {
         double travelCharge = Math.max(0, distanceKm - freeRadiusKm) * ratePerKm;
         double total = (quote.getHourlyRate() * quote.getEstimatedHours()) + quote.getApplianceCharge() + travelCharge;
 
-        com.rapidfix.dispatch.entity.Quote q = quoteRepo.findByRequestIdAndTechnicianId(requestId, technicianId)
-                .orElse(com.rapidfix.dispatch.entity.Quote.builder()
+        Quote q = quoteRepo.findByRequestIdAndTechnicianId(requestId, technicianId)
+                .orElse(Quote.builder()
                         .requestId(requestId)
                         .technicianId(technicianId)
                         .build());
@@ -142,7 +142,7 @@ public class DispatchServiceImpl implements DispatchService {
         q.setDistanceKm(distanceKm);
         q.setTotalAmount(Math.round(total * 100.0) / 100.0);
         q.setQuoteNote(quote.getQuoteNote());
-        q.setStatus(com.rapidfix.dispatch.entity.QuoteStatus.PENDING);
+        q.setStatus(QuoteStatus.PENDING);
         q.setTechnicianPhone(quote.getTechnicianPhone());
         quoteRepo.save(q);
 
@@ -178,15 +178,15 @@ public class DispatchServiceImpl implements DispatchService {
             throw new InvalidStateException(
                     messages.get("error.quote.not.quoted.approve", sr.getStatus()));
 
-        com.rapidfix.dispatch.entity.Quote approvedQuote = quoteRepo.findByRequestIdAndTechnicianId(requestId, technicianId)
+        Quote approvedQuote = quoteRepo.findByRequestIdAndTechnicianId(requestId, technicianId)
                 .orElseThrow(() -> new ResourceNotFoundException("Quote not found"));
 
-        List<com.rapidfix.dispatch.entity.Quote> allQuotes = quoteRepo.findByRequestId(requestId);
-        for (com.rapidfix.dispatch.entity.Quote q : allQuotes) {
+        List<Quote> allQuotes = quoteRepo.findByRequestId(requestId);
+        for (Quote q : allQuotes) {
             if (q.getTechnicianId().equals(technicianId)) {
-                q.setStatus(com.rapidfix.dispatch.entity.QuoteStatus.APPROVED);
+                q.setStatus(QuoteStatus.APPROVED);
             } else {
-                q.setStatus(com.rapidfix.dispatch.entity.QuoteStatus.REJECTED);
+                q.setStatus(QuoteStatus.REJECTED);
                 updateTechnicianAvailability(q.getTechnicianId(), "AVAILABLE");
             }
             quoteRepo.save(q);
@@ -227,15 +227,15 @@ public class DispatchServiceImpl implements DispatchService {
             throw new InvalidStateException(
                     messages.get("error.quote.not.quoted.reject", sr.getStatus()));
 
-        com.rapidfix.dispatch.entity.Quote q = quoteRepo.findByRequestIdAndTechnicianId(requestId, technicianId)
+        Quote q = quoteRepo.findByRequestIdAndTechnicianId(requestId, technicianId)
                 .orElseThrow(() -> new ResourceNotFoundException("Quote not found"));
-        q.setStatus(com.rapidfix.dispatch.entity.QuoteStatus.REJECTED);
+        q.setStatus(QuoteStatus.REJECTED);
         quoteRepo.save(q);
 
         updateTechnicianAvailability(technicianId, "AVAILABLE");
 
-        List<com.rapidfix.dispatch.entity.Quote> activeQuotes = quoteRepo.findByRequestId(requestId).stream()
-                .filter(quote -> quote.getStatus() == com.rapidfix.dispatch.entity.QuoteStatus.PENDING)
+        List<Quote> activeQuotes = quoteRepo.findByRequestId(requestId).stream()
+                .filter(quote -> quote.getStatus() == QuoteStatus.PENDING)
                 .toList();
 
         if (activeQuotes.isEmpty()) {
@@ -437,16 +437,16 @@ public class DispatchServiceImpl implements DispatchService {
         if (sr.getStatus() != RequestStatus.PENDING && sr.getStatus() != RequestStatus.QUOTED)
             throw new InvalidStateException("Quote already acted upon");
 
-        com.rapidfix.dispatch.entity.Quote q = quoteRepo.findByRequestIdAndTechnicianId(requestId, technicianId)
+        Quote q = quoteRepo.findByRequestIdAndTechnicianId(requestId, technicianId)
                 .orElseThrow(() -> new InvalidStateException("This is not your quote"));
-        q.setStatus(com.rapidfix.dispatch.entity.QuoteStatus.WITHDRAWN);
+        q.setStatus(QuoteStatus.WITHDRAWN);
         quoteRepo.save(q);
 
         updateTechnicianAvailability(technicianId, "AVAILABLE");
 
         // If all active quotes are withdrawn/rejected, revert request to PENDING
-        List<com.rapidfix.dispatch.entity.Quote> activeQuotes = quoteRepo.findByRequestId(requestId).stream()
-                .filter(quote -> quote.getStatus() == com.rapidfix.dispatch.entity.QuoteStatus.PENDING)
+        List<Quote> activeQuotes = quoteRepo.findByRequestId(requestId).stream()
+                .filter(quote -> quote.getStatus() == QuoteStatus.PENDING)
                 .toList();
 
         if (activeQuotes.isEmpty()) {

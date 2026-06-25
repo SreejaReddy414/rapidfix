@@ -1125,7 +1125,7 @@ export function TechnicianDashboard() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '32px' }}>
             <div>
               <h1 style={{ fontFamily: 'var(--font-head)', fontSize: '30px', fontWeight: 800, letterSpacing: '-0.5px', lineHeight: 1.1 }}>
-                Hello, {user?.name?.split(' ')[0]} 👋
+                Hello, {user?.name?.split(' ')[0]}
               </h1>
               <p style={{ color: 'var(--text3)', marginTop: '6px', fontSize: '14px' }}>
                 {profile?.serviceTypes?.map(s => s.replace(/_/g,' ')).join(' · ')}
@@ -1310,7 +1310,7 @@ export function BrowseJobsPage() {
             <p style={{ color: 'var(--text3)', fontSize: '14px', marginBottom: '28px' }}>
               Complete your current job before browsing new requests
             </p>
-            <button onClick={() => navigate('/technician/jobs')} style={{
+            <button onClick={() => navigate('/technician/dashboard')} style={{
               padding: '12px 28px', borderRadius: '12px', border: 'none',
               background: 'var(--accent)', color: '#fff', cursor: 'pointer',
               fontSize: '14px', fontWeight: 700, fontFamily: 'var(--font)',
@@ -1405,7 +1405,7 @@ export function BrowseJobsPage() {
                       fontSize: '13px', color: activeTabMeta.color || 'var(--text2)', fontWeight: 600,
                     }}>
                       <Search size={13} />
-                      {jobs.length} open job{jobs.length !== 1 ? 's' : ''} · {activeTab?.replace(/_/g, ' ')}
+                      {jobs.length} Open job{jobs.length !== 1 ? 's' : ''} · {activeTab?.replace(/_/g, ' ')}
                     </div>
                     <div style={{ display: 'grid', gap: '12px' }}>
                       {jobs.map(j => (

@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 public interface ServiceRequestRepository extends JpaRepository<ServiceRequest, Long> {
     Page<ServiceRequest> findByUserId(Long userId, Pageable pageable);
@@ -22,4 +23,7 @@ public interface ServiceRequestRepository extends JpaRepository<ServiceRequest, 
             @Param("serviceType") ServiceType serviceType,
             @Param("technicianId") Long technicianId,
             Pageable pageable);
+
+    // Payment: look up request by Razorpay order ID (for webhook processing)
+    Optional<ServiceRequest> findByRazorpayOrderId(String razorpayOrderId);
 }

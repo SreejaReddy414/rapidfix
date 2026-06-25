@@ -30,6 +30,11 @@ public class ServiceRequestMapper {
                 .broadcastedAt(r.getBroadcastedAt())
                 .completedAt(r.getCompletedAt())
                 .createdAt(r.getCreatedAt())
+                // Payment fields
+                .paymentStatus(r.getPaymentStatus())
+                .razorpayOrderId(r.getRazorpayOrderId())
+                .razorpayPaymentId(r.getRazorpayPaymentId())
+                .paidAt(r.getPaidAt())
                 .build();
     }
 

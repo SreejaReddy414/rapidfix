@@ -1,0 +1,12 @@
+GROUP,PACKAGE,CLASS,INSTRUCTION_MISSED,INSTRUCTION_COVERED,BRANCH_MISSED,BRANCH_COVERED,LINE_MISSED,LINE_COVERED,COMPLEXITY_MISSED,COMPLEXITY_COVERED,METHOD_MISSED,METHOD_COVERED
+dispatch-service,com.rapidfix.dispatch,DispatchServiceApplication,5,3,0,0,2,1,1,1,1,1
+dispatch-service,com.rapidfix.dispatch.client,TechnicianServiceClient.new ParameterizedTypeReference() {...},6,0,0,0,1,0,1,0,1,0
+dispatch-service,com.rapidfix.dispatch.client,TechnicianServiceClient.new ParameterizedTypeReference() {...},6,0,0,0,1,0,1,0,1,0
+dispatch-service,com.rapidfix.dispatch.client,TechnicianServiceClient,147,10,4,0,28,2,9,2,7,2
+dispatch-service,com.rapidfix.dispatch.service.impl,DispatchServiceImpl,99,1545,13,45,13,314,17,49,4,33
+dispatch-service,com.rapidfix.dispatch.controller,DispatchController,142,380,53,23,16,69,39,20,2,19
+dispatch-service,com.rapidfix.dispatch.controller,ChatController,35,9,0,0,11,1,2,1,2,1
+dispatch-service,com.rapidfix.dispatch.scheduler,AutoAssignmentScheduler,0,25,0,0,0,7,0,3,0,3
+dispatch-service,com.rapidfix.dispatch.security,JwtAuthFilter,46,10,6,0,10,1,4,2,1,2
+dispatch-service,com.rapidfix.dispatch.security,JwtUtil,0,70,0,2,0,14,0,9,0,8
+dispatch-service,com.rapidfix.dispatch.util,MessageService,0,33,0,0,0,11,0,3,0,3

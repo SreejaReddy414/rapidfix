@@ -79,3 +79,22 @@ spring:
           predicates:
             - Path=/ws/**
           # No JwtAuthFilter here — WebSocket upgrade can't carry Bearer header
+
+        # Payment webhook — public, no JWT (Razorpay posts here without tokens)
+        # Placed BEFORE the authenticated payment route so it matches first
+        - id: payment-webhook
+          uri: ${DISPATCH_SERVICE_URL:http://dispatch-service:8083}
+          predicates:
+            - Path=/api/payments/webhook
+
+        # All other payment endpoints — JWT protected
+        - id: payment-service
+          uri: ${DISPATCH_SERVICE_URL:http://dispatch-service:8083}
+          predicates:
+            - Path=/api/payments/**
+          filters:
+            - JwtAuthFilter
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter: "#{@redisRateLimiter}"
+                key-resolver: "#{@ipKeyResolver}"
